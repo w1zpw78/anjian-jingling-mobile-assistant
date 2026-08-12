@@ -1,2 +1,3 @@
-# anjian-jingling-mobile-assistant
-anjian-jingling-mobile-assistant
+# 按键精灵手机助手
+
+移动端按键自动化助手
