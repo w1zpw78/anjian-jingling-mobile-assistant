@@ -1,0 +1,7844 @@
+
+Dim 步骤3已执行
+
+步骤3已执行 = 0
+
+Dim 强制步骤1
+
+强制步骤1 = 0
+
+Dim 重启后步骤1
+
+重启后步骤1 = 0
+
+Dim 步骤2重启后待补步骤3
+
+步骤2重启后待补步骤3 = 0
+
+Dim 当前角色序号, 最大角色数量
+
+当前角色序号 = 1
+
+最大角色数量 = 6
+
+Dim 脚本模式
+
+脚本模式 = ReadUIConfig("选择任务")
+
+Do
+
+    Call 主流程()
+
+    TracePrint "【守护】主流程异常退出，5秒后自动重启"
+
+    Delay 5000
+
+Loop
+
+Dim 全局等级
+
+全局等级 = 0
+
+Dim 全局本轮已点击
+
+Dim 上次输入字符
+上次输入字符 = ""
+全局本轮已点击 = 0
+
+Dim 全局点击后可接取X, 全局点击后可接取Y
+全局点击后可接取X = -1
+全局点击后可接取Y = -1
+
+Sub 主流程()
+
+    Dim 字库0结果, 字库2结果, 字库3结果
+
+    SetRowsNumber(0)
+
+    字库0结果 = SetDictEx(0, "Attachment:字库.txt")
+
+    TracePrint "【初始化】字库0加载结果: " & 字库0结果
+
+    字库2结果 = SetDictEx(2, "Attachment:字库2.txt")
+
+    TracePrint "【初始化】字库2加载结果: " & 字库2结果
+
+    字库3结果 = SetDictEx(3, "Attachment:字库3.txt")
+
+    TracePrint "【初始化】字库3加载结果: " & 字库3结果
+
+    If 字库0结果 = 0 Or 字库2结果 = 0 Or 字库3结果 = 0 Then
+
+        ShowMessage "字库加载失败，请检查字库文件", 5000, 0, 0
+
+        EndScript
+
+    End If
+
+    Dim 包名, 连续闪退次数, 运行状态
+    Dim intX, intY, 当前阶段, 提示信息, 需重新识别
+
+    Dim 清理计数, 清理到东西
+
+    包名 = "com.hi4fun.ldsgjlyq"
+
+    连续闪退次数 = 0
+
+    Dim 云手机兼容模式
+    云手机兼容模式 = 1
+
+    TracePrint "============================================"
+
+    TracePrint "【主程序】启动完成，进入守护循环"
+
+    TracePrint "============================================"
+
+    Do
+
+        If 云手机兼容模式 = 1 Then
+            运行状态 = True
+        Else
+            运行状态 = Sys.IsRunning(包名)
+        End If
+
+        If 运行状态 = False Then
+            连续闪退次数 = 连续闪退次数 + 1
+
+            TracePrint "【闪退检测】游戏未运行，连续异常次数=" & 连续闪退次数
+
+            ShowMessage "游戏闪退/未运行，正在重启 (" & 连续闪退次数 & ")", 2000, 0, 0
+
+            Call 重启游戏(包名, 20000)
+
+            If 连续闪退次数 >= 5 Then
+
+                ShowMessage "连续闪退5次，暂停10秒", 3000, 0, 0
+
+                Delay 10000
+
+                连续闪退次数 = 0
+
+            End If
+
+        Else
+
+            If 连续闪退次数 > 0 Then
+
+                TracePrint "【进程检测】游戏已恢复运行，重置异常计数"
+
+                连续闪退次数 = 0
+
+            End If
+
+            If 强制步骤1 = 1 Then
+
+                TracePrint "【主流程】KillApp重启后强制走步骤1"
+
+                强制步骤1 = 0
+
+                当前阶段 = 1
+
+            Else
+
+                当前阶段 = 判断当前阶段()
+
+            End If
+
+            需重新识别 = 0
+
+            If 当前阶段 = 2 Then
+
+                提示信息 = "【步骤2】游戏主界面"
+
+                TracePrint "【主流程】" & 提示信息
+
+                ShowMessage 提示信息, 2000, 0, 0
+
+                Call 步骤2_主线到20级()
+
+                If 强制步骤1 = 1 Then
+
+                    TracePrint "【主流程】步骤2因KillApp退出，跳过步骤3重新识别阶段"
+
+                    步骤2重启后待补步骤3 = 1
+
+                    需重新识别 = 1
+
+                End If
+
+            Else
+
+                提示信息 = "【步骤1】登录/引导界面"
+
+                TracePrint "【主流程】" & 提示信息
+
+                ShowMessage 提示信息, 2000, 0, 0
+
+                Call 步骤1_完全版()
+
+                TracePrint "【主流程】步骤1结束，进入步骤2"
+
+                Call 步骤2_主线到20级()
+
+                If 强制步骤1 = 1 Then
+
+                    TracePrint "【主流程】步骤2因KillApp退出，跳过步骤3重新识别阶段"
+
+                    步骤2重启后待补步骤3 = 1
+
+                    需重新识别 = 1
+
+                End If
+
+            End If
+
+            If 需重新识别 = 0 Then
+
+                If 步骤3已执行 = 0 Or 步骤2重启后待补步骤3 = 1 Then
+
+                    TracePrint "【主流程】步骤2已真正结束（含确认B），开始执行步骤3"
+
+                    Call 商店购买流程()
+
+                    Call 步骤3_每日任务()
+
+                    步骤3已执行 = 1
+
+                    步骤2重启后待补步骤3 = 0
+
+                    TracePrint "【主流程】步骤3执行完毕，清理窗口后执行获取水晶"
+
+                    清理计数 = 0
+
+                    Do
+
+                        清理到东西 = 0
+
+                        If 清理常见弹窗("清理窗口") = True Then
+                            清理到东西 = 1
+                        End If
+
+                        FindStr 661, 28, 693, 60, "x", "FFFFFF-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【清理窗口】识别到【x】，点击"
+
+                            Tap intX, intY
+
+                            Delay 1000
+
+                            清理到东西 = 1
+
+                        End If
+
+                        FindStr 133, 1200, 181, 1249, "X", "BFBFBF-303030", 0.8, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【清理窗口】识别到【对话X】，点击"
+
+                            Tap intX, intY
+
+                            Delay 500
+
+                            清理到东西 = 1
+
+                        End If
+
+                        FindStr 487, 1042, 539, 1105, "首充", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【清理窗口】识别到【首充】，点击关闭"
+
+                            Tap intX, intY
+
+                            Delay 1000
+
+                            清理到东西 = 1
+
+                        End If
+
+                        Call 检测并点击新手()
+
+                        If 清理到东西 = 0 Then
+
+                            清理计数 = 清理计数 + 1
+
+                            If 清理计数 >= 2 Then
+
+                                TracePrint "【清理窗口】连续2轮无弹窗，开始执行获取水晶"
+
+                                Exit Do
+
+                            End If
+
+                        Else
+
+                            清理计数 = 0
+
+                        End If
+
+                        Delay 500
+
+                    Loop
+
+                    If 脚本模式 = 2 Then
+
+                        Call 六角色20级_循环()
+
+                    Else
+
+                        Call 获取水晶()
+
+                    End If
+
+                    TracePrint "【主流程】获取水晶执行完毕，后续循环仅做守护"
+
+                Else
+
+                    TracePrint "【主流程】步骤3已执行过，跳过"
+
+                End If
+
+            End If
+
+        End If
+
+        TracePrint "【主流程】循环结束，重新识别阶段"
+
+    Loop
+
+End Sub
+
+Function 清理常见弹窗(来源)
+    Dim intX, intY
+    清理常见弹窗 = False
+
+    FindStr 661, 28, 693, 60, "x", "FFFFFF-303030", 0.9, intX, intY
+    If intX > -1 And intY > -1 Then
+        TracePrint "【" & 来源 & "】识别到【x】，点击"
+        Tap intX, intY
+        Delay 1000
+        清理常见弹窗 = True
+        Exit Function
+    End If
+
+    FindStr 133, 1200, 181, 1249, "X", "BFBFBF-303030", 0.8, intX, intY
+    If intX > -1 And intY > -1 Then
+        TracePrint "【" & 来源 & "】识别到【对话X】，点击"
+        Tap intX, intY
+        Delay 500
+        清理常见弹窗 = True
+        Exit Function
+    End If
+
+    FindStr 487, 1042, 539, 1105, "首充", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+    If intX > -1 And intY > -1 Then
+        TracePrint "【" & 来源 & "】识别到【首充】，点击关闭"
+        Tap intX, intY
+        Delay 1000
+        清理常见弹窗 = True
+        Exit Function
+    End If
+
+    If 全局等级 = "" Or IsNull(全局等级) Then 全局等级 = 0
+
+    If 全局等级 < 17 Then
+        FindStr 663, 52, 693, 170, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+        If intX > -1 And intY > -1 Then
+            TracePrint "【" & 来源 & "】识别到【新手结束】，点击"
+            Tap intX, intY
+            Delay 1000
+            清理常见弹窗 = True
+            Exit Function
+        End If
+
+        FindStr 644, 983, 712, 1177, "新手", "FFFFFF-303030", 0.8, intX, intY
+        If intX > -1 And intY > -1 Then
+            TracePrint "【" & 来源 & "】识别到【新手】，点击"
+            Tap intX, intY
+            Delay 1000
+            清理常见弹窗 = True
+            Exit Function
+        End If
+    Else
+        FindStr 662, 30, 694, 169, "新手", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+        If intX > -1 And intY > -1 Then
+            TracePrint "【" & 来源 & "】识别到【新手】，点击"
+            Tap intX, intY
+            Delay 1000
+            清理常见弹窗 = True
+            Exit Function
+        End If
+    End If
+End Function
+
+Function 判断当前阶段()
+
+    Dim intX, intY, ocr结果
+
+    UseDict 2
+
+    FindStr 519, 1128, 636, 1180, "完成", "6DFF94-303030|6AF696-303030|6CFB95-303030", 0.8, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【阶段识别】检测到【完成】 → 步骤2"
+
+        判断当前阶段 = 2
+
+        Exit Function
+
+    End If
+
+    FindStr 113, 598, 267, 872, "接取", "6AB3ED-303030|6CBAF7-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【阶段识别】检测到【接取】 → 步骤2"
+
+        判断当前阶段 = 2
+
+        Exit Function
+
+    End If
+
+    FindStr 528, 938, 634, 1227, "点击后可接取", "FFFFFF-303030|ECECEC-303030|D7D8D9-303030", 0.8, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【阶段识别】检测到【点击后可接取】 → 步骤2"
+
+        判断当前阶段 = 2
+
+        Exit Function
+
+    End If
+
+    Dim 距离OCR
+
+    距离OCR = Ocr(517, 1168, 638, 1225, "DCF102-303030|BACC05-303030|B9CC05-303030", 0.8)
+
+    If 距离OCR <> "" And IsNumeric(距离OCR) Then
+
+        TracePrint "【阶段识别】检测到距离=" & 距离OCR & " → 步骤2"
+
+        判断当前阶段 = 2
+
+        Exit Function
+
+    End If
+
+    ocr结果 = Ocr(10, 513, 28, 556, "CFCCCB-303030|FFFFFF-303030", 0.8)
+
+    If ocr结果 <> "" Then
+
+        If IsNumeric(ocr结果) Then
+
+            Dim 等级数字
+
+            等级数字 = ocr结果 * 1
+
+            If 等级数字 >= 1 And 等级数字 <= 100 Then
+
+                TracePrint "【阶段识别】检测到等级=" & 等级数字 & " → 步骤2"
+
+                判断当前阶段 = 2
+
+                Exit Function
+
+            End If
+
+        End If
+
+    End If
+
+    FindStr 663, 52, 693, 170, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【阶段识别】检测到【新手结束】区域1 → 步骤2"
+
+        判断当前阶段 = 2
+
+        Exit Function
+
+    End If
+
+    FindStr 644, 983, 712, 1177, "新手", "FFFFFF-303030", 0.8, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【阶段识别】检测到【新手】区域2 → 步骤2"
+
+        判断当前阶段 = 2
+
+        Exit Function
+
+    End If
+
+    TracePrint "【阶段识别】未检测到步骤2特征 → 默认步骤1"
+
+    判断当前阶段 = 1
+
+End Function
+
+Sub 检测并点击新手()
+
+    Dim intX, intY
+
+    If 全局等级 = "" Or IsNull(全局等级) Then 全局等级 = 0
+
+    If 全局等级 < 17 Then
+
+        FindStr 663, 52, 693, 170, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【新手检测】识别到【新手结束】区域1，点击"
+
+            Tap intX, intY
+
+            全局本轮已点击 = 1
+
+            Delay 1000
+
+            Exit Sub
+
+        End If
+
+        FindStr 644, 983, 712, 1177, "新手", "FFFFFF-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【新手检测】识别到【新手】区域2，点击"
+
+            Tap intX, intY
+
+            全局本轮已点击 = 1
+
+            Delay 1000
+
+        End If
+
+    Else
+
+        FindStr 662, 30, 694, 169, "新手", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【新手检测】识别到【新手】区域1，点击"
+
+            Tap intX, intY
+
+            全局本轮已点击 = 1
+
+            Delay 1000
+
+        End If
+
+    End If
+
+End Sub
+
+Sub 步骤1_完全版()
+
+   UseDict 0
+
+   Dim 目标包名, 相似度, intX, intY, i
+
+   Dim 已点X, 已点进入游戏, 已处理勾选, 已选红方, 已点确认下一个, 已点创建角色, 已处理输入, 已点开始游戏
+
+   Dim 已点跳过序章, 已点弓箭, 已点确认
+
+   Dim 扫描开始时间, 序章扫描开始时间
+
+   目标包名 = "com.hi4fun.ldsgjlyq"
+
+   相似度 = 0.9
+
+   已点X = 0
+
+   已点进入游戏 = 0
+
+   已处理勾选 = 0
+
+   已选红方 = 0
+
+   已点确认下一个 = 0
+
+   已点创建角色 = 0
+
+   已处理输入 = 0
+
+   已点开始游戏 = 0
+
+   已点跳过序章 = 0
+
+   已点弓箭 = 0
+
+   已点确认 = 0
+
+   序章扫描开始时间 = 0
+
+   Dim 已处理确认流程
+
+   已处理确认流程 = 0
+
+   TracePrint "【步骤1】跳过主动启动应用，直接识别当前页面"
+
+   TracePrint "【步骤1】前置扫描启动..."
+
+   扫描开始时间 = TickCount()
+
+   Do
+
+       FindPic 211, 648, 302, 880, "Attachment:是.png", "000000", 0, 0.9, intX, intY
+       If intX > -1 And intY > -1 Then
+           TracePrint "【步骤1-前置】当前已在名字确认页面，跳过前置扫描"
+           已选红方 = 1
+           已点确认下一个 = 1
+           已点创建角色 = 1
+           Exit Do
+       End If
+
+       FindStr 33, 1080, 66, 1234, "创建角色", "6FC0FF-303030|6FC0FF-303030", 相似度, intX, intY
+       If intX > -1 And intY > -1 Then
+           TracePrint "【步骤1-前置】当前已在创建角色页面，跳过前置扫描"
+           已选红方 = 1
+           已点确认下一个 = 1
+           Exit Do
+       End If
+
+       FindStr 7, 1023, 141, 1269, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+       If intX > -1 And intY > -1 Then
+           TracePrint "【步骤1-前置】当前已在开始游戏页面，跳过前置扫描"
+           Exit Do
+       End If
+
+       FindPic 12, 1039, 83, 1262, "Attachment:下一个.png", "000000", 0, 0.9, intX, intY
+       If intX > -1 And intY > -1 Then
+           TracePrint "【步骤1-前置】当前已在确认下一个页面，跳过前置扫描"
+           已选红方 = 1
+           Exit Do
+       End If
+
+       FindStr 14, 1110, 97, 1267, "下一个", "FDFDFD-303030|FAFBFB-303030|FFFFFF-303030", 相似度, intX, intY
+       If intX > -1 And intY > -1 Then
+           TracePrint "【步骤1-前置】当前已在选阵营下一个页面，跳过前置扫描"
+           Exit Do
+       End If
+
+       If 已点X = 0 Then
+
+           FindStr 559, 207, 611, 314, "公告", "FFFFFF-303030|FDFDFD-303030|DDDBDA-303030", 相似度, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤1-前置】识别到【公告】，搜索x关闭"
+
+               FindStr 558, 1012, 618, 1074, "x", "BFBFBF-303030", 相似度, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤1-前置】识别到【x】，点击"
+
+                   Tap intX, intY
+
+                   Delay 500
+
+                   已点X = 1
+
+               End If
+
+           End If
+
+       End If
+
+       If 已点进入游戏 = 0 Then
+
+           If 重启后步骤1 = 0 Or 已点X = 1 Then
+
+               FindStr 138, 507, 178, 716, "进入游戏", "FFFFFF-303030|E6E4E4-303030|DDDADA-303030", 相似度, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤1-前置】识别到【进入游戏】，点击"
+
+                   Tap intX, intY
+
+                   Delay 1500
+
+                   已点进入游戏 = 1
+
+                   重启后步骤1 = 0
+
+               End If
+
+           Else
+
+               TracePrint "【步骤1-前置】重启后等待公告x完成，暂不识别进入游戏"
+
+           End If
+
+       End If
+
+       If 已处理勾选 = 0 Then
+
+           FindStr 135, 444, 166, 475, "√", "DDDDDD-303030", 相似度, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤1-前置】识别到【√】，点击382,640"
+
+               Delay 500
+
+               Tap 382, 640
+
+               Delay 1000
+
+               已处理勾选 = 1
+
+               Exit Do
+
+           ElseIf 已点进入游戏 = 1 Then
+
+               TracePrint "【步骤1-前置】未识别到【√】，点击147,458 → 382,640"
+
+               Tap 147, 458
+
+               Delay 500
+
+               Tap 382, 640
+
+               Delay 1000
+
+               已处理勾选 = 1
+
+               Exit Do
+
+           End If
+
+       End If
+
+       If (TickCount() - 扫描开始时间) >= 90000 Then
+
+           TracePrint "【步骤1-前置】超时90秒，杀掉进程，返回主流程"
+
+           Call 重启游戏(目标包名, 20000)
+
+           Exit Sub
+
+       End If
+
+       Delay 300
+
+   Loop
+
+   TracePrint "【步骤1】前置扫描结束，已点开始游戏=" & 已点开始游戏
+
+   Delay 1000
+
+   TracePrint "【步骤1】分支扫描启动..."
+
+   扫描开始时间 = TickCount()
+
+   Do
+
+       If 已点开始游戏 = 0 And 已选红方 = 0 And 已处理确认流程 = 0 Then
+
+           FindStr 220, 519, 297, 766, "确认", "6FC0FF-303030|6FC0FF-303030", 0.9, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤1-分支】识别到【确认】，点击"
+
+               Tap intX, intY
+
+               Delay 1500
+
+               已处理勾选 = 0
+
+           Else
+
+               FindStr 31, 1080, 65, 1231, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤1-分支】识别到【开始游戏】，确认流程完成"
+
+                   已处理确认流程 = 1
+
+               Else
+
+                   FindStr 14, 1110, 97, 1267, "下一个", "FDFDFD-303030|FAFBFB-303030|FFFFFF-303030", 相似度, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤1-分支】识别到【下一个】，确认流程完成"
+
+                       已处理确认流程 = 1
+
+                   End If
+
+               End If
+
+               If 已处理确认流程 = 0 And 已处理勾选 = 0 Then
+
+                   FindStr 135, 444, 166, 475, "√", "DDDDDD-303030", 相似度, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤1-分支】识别到【√】，点击382,640"
+
+                       Tap 382, 640
+
+                       Delay 1000
+
+                       已处理勾选 = 1
+
+                   Else
+
+                       TracePrint "【步骤1-分支】未识别到【√】，点击147,458 → 382,640"
+
+                       Tap 147, 458
+
+                       Delay 500
+
+                       Tap 382, 640
+
+                       Delay 1000
+
+                       已处理勾选 = 1
+
+                   End If
+
+               End If
+
+           End If
+
+       End If
+
+       If 已点开始游戏 = 0 Then
+
+           FindStr 31, 1080, 65, 1231, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤1-分支A】识别到【开始游戏】，点击"
+
+               Tap intX, intY
+
+               Delay 2000
+
+               FindStr 31, 1080, 65, 1231, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤1-分支A】点击后【开始游戏】仍在，重试"
+
+                   Tap intX, intY
+
+                   Delay 2000
+
+                   FindStr 31, 1080, 65, 1231, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤1-分支A】二次重试仍无效，等下一轮"
+
+                   Else
+
+                       TracePrint "【步骤1-分支A】重试点击成功"
+
+                       已点开始游戏 = 1
+
+                       已处理确认流程 = 1
+
+                   End If
+
+               Else
+
+                   TracePrint "【步骤1-分支A】点击有效，进入开始游戏后流程"
+
+                   已点开始游戏 = 1
+
+                   已处理确认流程 = 1
+
+               End If
+
+           End If
+
+       End If
+
+       If 已选红方 = 0 Then
+
+           FindStr 14, 1110, 97, 1267, "下一个", "FDFDFD-303030|FAFBFB-303030|FFFFFF-303030", 相似度, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤1-分支B】选阵营点红方→下一个（优化版完整流程）"
+               Tap 522, 460
+
+               Delay 500
+
+               Tap intX, intY
+
+               Delay 1500
+
+               FindPic 236, 479, 276, 557, "Attachment:否.png", "000000", 0, 0.9, intX, intY
+               If intX > -1 And intY > -1 Then
+                   TracePrint "【步骤1-分支B】检测到否弹窗，点击否"
+                   Tap intX, intY
+                   Delay 1000
+               End If
+
+               已选红方 = 1
+
+           End If
+
+       End If
+
+       If 已选红方 = 1 And 已点确认下一个 = 0 Then
+
+           FindPic 12, 1039, 83, 1262, "Attachment:下一个.png", "000000", 0, 0.9, intX, intY
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤1-分支B】确认界面识别到【下一个】图片，点击"
+               Tap intX, intY
+
+               Delay 1500
+
+               已点确认下一个 = 1
+
+           End If
+
+       End If
+
+       If 已点确认下一个 = 1 And 已点创建角色 = 0 Then
+
+           FindStr 33, 1080, 66, 1234, "创建角色", "6FC0FF-303030|6FC0FF-303030", 相似度, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤1-分支B】点击【创建角色】"
+
+               Tap intX, intY
+
+               Delay 2000
+
+               已点创建角色 = 1
+
+           End If
+
+       End If
+
+       If 已点创建角色 = 1 And 已处理输入 = 0 Then
+
+           FindPic 211, 648, 302, 880, "Attachment:是.png", "000000", 0, 0.9, intX, intY
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤1-分支B】输入名字流程（优化版）"
+
+               Tap 356, 621
+
+               Delay 2000
+
+               For i = 1 To 3
+
+                   KeyPress "Del"
+
+                   Delay 100
+
+               Next
+
+               Delay 300
+
+               Call 输入英文或数字()
+
+               KeyPress "Back"
+
+               Delay 500
+
+               Tap intX, intY
+
+               Delay 1500
+
+               Tap intX, intY
+
+               Delay 2000
+
+               已处理输入 = 1
+
+           End If
+
+       End If
+
+       If 已处理输入 = 1 And 已点开始游戏 = 0 Then
+
+           FindStr 7, 1023, 141, 1269, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤1-分支B】名字成功，点击【开始游戏】（优化版）"
+               Tap intX, intY
+
+               Delay 2000
+
+               FindStr 7, 1023, 141, 1269, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   Tap intX, intY
+
+                   Delay 2000
+
+                   FindStr 7, 1023, 141, 1269, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤1-分支B】二次重试无效"
+                   Else
+
+                       已点开始游戏 = 1
+
+                       已处理确认流程 = 1
+
+                   End If
+
+               Else
+
+                   已点开始游戏 = 1
+
+                   已处理确认流程 = 1
+
+               End If
+
+           End If
+
+           FindStr 7, 1023, 141, 1269, "创建角色", "6FC0FF-303030|6FC0FF-303030", 相似度, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤1-分支B】名字重复重新来过"
+               Tap intX, intY
+
+               Delay 2000
+
+               已处理输入 = 0
+
+           End If
+
+       End If
+
+       If 已点开始游戏 = 1 Then
+
+           If 已点跳过序章 = 0 Then
+
+               If 序章扫描开始时间 = 0 Then
+
+                   序章扫描开始时间 = TickCount()
+
+                   TracePrint "【步骤1-公共】开始检测【跳过序章】，限时3秒"
+
+               End If
+
+               FindStr 239, 446, 273, 599, "跳过序章", "FFFFFF-303030|E3E3E2-303030|F2F1F1-303030", 相似度, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤1-公共】识别到【跳过序章】，点击"
+
+                   Tap intX, intY
+
+                   Delay 1500
+
+                   已点跳过序章 = 1
+
+               Else
+
+                   If (TickCount() - 序章扫描开始时间) >= 3000 Then
+
+                       TracePrint "【步骤1-公共】3秒未识别【跳过序章】，判断为老角色，步骤1结束"
+
+                       Exit Do
+
+                   End If
+
+               End If
+
+           End If
+
+           If 已点跳过序章 = 1 And 已点弓箭 = 0 Then
+
+               FindStr 297, 758, 340, 830, "弓箭", "FFFFFF-303030|BFBFBF-303030|F2F1F1-303030", 相似度, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤1-公共】识别到【弓箭】，点击"
+
+                   Tap intX, intY
+
+                   Delay 800
+
+                   已点弓箭 = 1
+
+               End If
+
+           End If
+
+           If 已点弓箭 = 1 And 已点确认 = 0 Then
+
+               FindStr 223, 696, 258, 776, "确认", "6FC0FF-303030|6FC0FF-303030|68B1EA-303030", 相似度, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤1-公共】识别到【确认】，点击"
+
+                   Tap intX, intY
+
+                   Delay 2000
+
+                   已点确认 = 1
+
+               End If
+
+           End If
+
+           If 已点确认 = 1 Then
+
+               Dim 教学扫描开始
+
+               教学扫描开始 = TickCount()
+
+               Do
+
+                   FindStr 662, 29, 690, 170, "新手教学结束", "FFFFFF-303030|C4C0BD-303030|D9D6D4-303030", 相似度, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤1-公共】识别到【新手教学结束】，点击"
+
+                       Tap intX, intY
+
+                       Exit Do
+
+                   End If
+
+                   If (TickCount() - 教学扫描开始) >= 5000 Then
+
+                       TracePrint "【步骤1-公共】5秒未识别【新手教学结束】，跳过"
+
+                       Exit Do
+
+                   End If
+
+                   Delay 300
+
+               Loop
+
+               TracePrint "【步骤1-公共】步骤1全部完成"
+
+               Exit Do
+
+           End If
+
+       End If
+
+       If (TickCount() - 扫描开始时间) >= 120000 Then
+
+           TracePrint "【步骤1】分支扫描超时120秒，返回主流程"
+
+           Exit Do
+
+       End If
+
+       Delay 300
+
+   Loop
+
+   TracePrint ">>> 步骤1_完全版 结束"
+
+End Sub
+
+Sub 步骤2_主线到20级()
+
+    Dim 当前等级, intX, intY, ocr结果
+
+    Dim i
+
+    Dim 任务状态
+
+    任务状态 = 0
+
+    Dim 宠物流程已执行, 宠物流程开始时间
+
+    宠物流程已执行 = 0
+
+    宠物流程开始时间 = 0
+
+    Dim 坐骑流程已完成
+
+    坐骑流程已完成 = 0
+
+    Dim 等待接取中, 接取等待时间
+
+    等待接取中 = 0
+
+    接取等待时间 = 0
+
+    Dim 遮挡清理开始时间
+
+    遮挡清理开始时间 = 0
+
+    Dim 上次距离
+
+    Dim 最后靠近时间
+
+    Dim 距离不变计时
+
+    Dim 点击后检测中, 点击后检测计时, 点击时的距离值
+
+    Dim 距离不变次数, 点击后距离不变次数
+
+    点击后检测中 = 0
+
+    点击后检测计时 = 0
+
+    点击时的距离值 = -1
+
+    距离不变次数 = 0
+
+    点击后距离不变次数 = 0
+
+    Dim OCR空计数, OCR空开始时间
+
+    OCR空计数 = 0
+
+    OCR空开始时间 = 0
+
+    Dim 全面检查未点击次数
+
+    全面检查未点击次数 = 0
+
+    Dim 警备队长已执行, 警备队长上次距离, 警备队长距离不变次数
+
+    警备队长已执行 = 0
+
+    警备队长上次距离 = -1
+
+    警备队长距离不变次数 = 0
+
+    Dim 步骤2结束确认中, 步骤2结束确认计时
+
+    步骤2结束确认中 = 0
+
+    步骤2结束确认计时 = 0
+
+    Dim 武器箱已完成
+
+    武器箱已完成 = 0
+
+    Dim 等级检测计时, 距离检测计时
+
+    等级检测计时 = 0
+
+    距离检测计时 = 0
+
+    当前等级 = 0
+
+    上次距离 = -1
+
+    最后靠近时间 = TickCount()
+
+    距离不变计时 = TickCount()
+
+    UseDict 2
+
+    TracePrint "【步骤2】状态机启动，初始状态=0，无限循环"
+
+    Do
+
+        全局本轮已点击 = 0
+
+        Call 检测并点击新手()
+
+        If 步骤2结束确认中 = 1 Then
+
+            FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【步骤2结束】识别到【确认B】，点击并等待2秒"
+
+                Tap intX, intY
+
+                全局本轮已点击 = 1
+
+                Delay 2000
+
+                FindStr 663, 52, 693, 170, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【步骤2结束】识别到【新手结束】区域1，点击"
+
+                    Tap intX, intY
+
+                    全局本轮已点击 = 1
+
+                    Delay 3000
+
+                Else
+
+                    FindStr 1002, 7, 1273, 94, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【步骤2结束】识别到【新手结束】区域2，点击"
+
+                        Tap intX, intY
+
+                        全局本轮已点击 = 1
+
+                        Delay 3000
+
+                    End If
+
+                End If
+
+                TracePrint "【步骤2】确认B+新手结束均处理完毕，真正结束"
+
+                Exit Do
+
+            End If
+
+            If (TickCount() - 步骤2结束确认计时) >= 10000 Then
+
+                TracePrint "【步骤2结束】10秒未识别确认B，强制结束"
+
+                Exit Do
+
+            End If
+
+            Delay 500
+
+        Else
+
+            If (TickCount() - 等级检测计时) >= 30000 Then
+
+                等级检测计时 = TickCount()
+
+                ocr结果 = Ocr(10, 513, 28, 556, "CFCCCB-303030|FFFFFF-303030", 0.8)
+
+                If ocr结果 <> "" Then
+
+                    当前等级 = ocr结果 * 1
+
+                    全局等级 = 当前等级
+
+                    TracePrint "【步骤2】当前等级: " & 当前等级
+
+                End If
+
+                If 当前等级 >= 12 Then
+
+                    FindStr 479, 939, 635, 1224, "需要", "FFFFFF-303030|ECECEC-303030|D7D8D9-303030", 0.8, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【步骤2】识别到【需要】，坐标: " & intX & "," & intY
+
+                        If 当前等级 >= 14 Then
+
+                            TracePrint "【步骤2】等级>=14且识别到【需要】，进入结束确认阶段"
+
+                            步骤2结束确认中 = 1
+
+                            步骤2结束确认计时 = TickCount()
+
+                        End If
+
+                    End If
+
+                End If
+
+                If 当前等级 >= 20 And 步骤2结束确认中 = 0 Then
+
+                    TracePrint "【步骤2】已达到20级，进入结束确认阶段"
+
+                    步骤2结束确认中 = 1
+
+                    步骤2结束确认计时 = TickCount()
+
+                End If
+
+            End If
+
+            If 当前等级 < 3 And 坐骑流程已完成 = 0 Then
+
+                FindStr 239, 587, 362, 893, "坐骑", "6FC0FF-303030", 0.9, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【步骤2】识别到【坐骑】，进入坐骑流程"
+
+                    Tap intX, intY
+
+                    全局本轮已点击 = 1
+
+                    Delay 1500
+
+                    Dim 坐骑总计时
+
+                    坐骑总计时 = TickCount()
+
+                    Dim 主菜单等待开始
+
+                    主菜单等待开始 = TickCount()
+
+                    Do
+
+                        FindStr 674, 1230, 708, 1265, "主菜单", "FFFFFF-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【步骤2-坐骑】识别到【主菜单】，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1500
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - 主菜单等待开始) >= 5000 Then
+
+                            TracePrint "【步骤2-坐骑】5秒未识别主菜单，继续下一步"
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - 坐骑总计时) >= 180000 Then
+
+                            TracePrint "【步骤2-坐骑】总超时3分钟（主菜单阶段），重启"
+
+                            Call 重启游戏("com.hi4fun.ldsgjlyq", 20000)
+
+                            Exit Sub
+
+                        End If
+
+                        Delay 500
+
+                    Loop
+
+                    Dim 伙伴等待开始
+
+                    伙伴等待开始 = TickCount()
+
+                    Do
+
+                        FindStr 434, 1118, 482, 1175, "伙伴", "FFFFFF-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【步骤2-坐骑】识别到【伙伴】，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1500
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - 伙伴等待开始) >= 5000 Then
+
+                            TracePrint "【步骤2-坐骑】5秒未识别伙伴，继续下一步"
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - 坐骑总计时) >= 180000 Then
+
+                            TracePrint "【步骤2-坐骑】总超时3分钟（伙伴阶段），重启"
+
+                            Call 重启游戏("com.hi4fun.ldsgjlyq", 20000)
+
+                            Exit Sub
+
+                        End If
+
+                        Delay 500
+
+                    Loop
+
+                    TracePrint "【步骤2-坐骑】等待识别【n】，限时10秒..."
+
+                    Dim n等待开始
+
+                    n等待开始 = TickCount()
+
+                    Do
+
+                        FindStr 699, 408, 719, 435, "n", "FFFFFF-303030|E6E6F9-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【步骤2-坐骑】识别到【n】，点击第1次"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 800
+
+                            TracePrint "【步骤2-坐骑】点击【n】第2次"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 800
+
+                            TracePrint "【步骤2-坐骑】390,1067连续点击5秒"
+
+                            For i = 1 To 5
+
+                                Tap 390, 1067
+
+                                Delay 1000
+
+                            Next
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - n等待开始) >= 10000 Then
+
+                            TracePrint "【步骤2-坐骑】10秒未识别到【n】，执行兜底点击 691,408 5秒"
+
+                            For i = 1 To 5
+
+                                Tap 691, 408
+
+                                Delay 1000
+
+                            Next
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - 坐骑总计时) >= 180000 Then
+
+                            TracePrint "【步骤2-坐骑】总超时3分钟（n等待阶段），重启"
+
+                            Call 重启游戏("com.hi4fun.ldsgjlyq", 20000)
+
+                            Exit Sub
+
+                        End If
+
+                        Delay 500
+
+                    Loop
+
+                    TracePrint "【步骤2-坐骑】等待识别【装备】..."
+
+                    Dim 装备等待开始
+
+                    装备等待开始 = TickCount()
+
+                    Do
+
+                        FindStr 38, 1068, 73, 1143, "装备", "6FC0FF-303030|6FBFFD-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【步骤2-坐骑】识别到【装备】，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1500
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - 装备等待开始) >= 30000 Then
+
+                            TracePrint "【步骤2-坐骑】30秒未识别装备，跳过装备等待"
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - 坐骑总计时) >= 180000 Then
+
+                            TracePrint "【步骤2-坐骑】总超时3分钟（装备等待阶段），重启"
+
+                            Call 重启游戏("com.hi4fun.ldsgjlyq", 20000)
+
+                            Exit Sub
+
+                        End If
+
+                        Delay 500
+
+                    Loop
+
+                    TracePrint "【步骤2-坐骑】等待识别【X】..."
+
+                    Dim x等待开始
+
+                    x等待开始 = TickCount()
+
+                    Do
+
+                        FindStr 669, 1213, 715, 1269, "X", "BFBFBF-303030", 0.8, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【步骤2-坐骑】识别到【X】，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1000
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - x等待开始) >= 30000 Then
+
+                            TracePrint "【步骤2-坐骑】30秒未识别X，跳过"
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - 坐骑总计时) >= 180000 Then
+
+                            TracePrint "【步骤2-坐骑】总超时3分钟（X等待阶段），重启"
+
+                            Call 重启游戏("com.hi4fun.ldsgjlyq", 20000)
+
+                            Exit Sub
+
+                        End If
+
+                        Delay 500
+
+                    Loop
+
+                    TracePrint "【步骤2-坐骑】点击固定坐标 59,1068"
+
+                    Tap 59, 1068
+
+                    Delay 1000
+
+                    坐骑流程已完成 = 1
+
+                    TracePrint "【步骤2-坐骑】坐骑流程全部完成"
+
+                End If
+
+            End If
+
+            If 任务状态 = 1 Then
+
+                Dim 需重置状态
+
+                需重置状态 = 0
+
+                FindStr 519, 1128, 636, 1180, "完成", "6DFF94-303030|6AF696-303030|6CFB95-303030", 0.8, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【状态1】识别到【完成】，点击"
+
+                    Tap intX, intY
+
+                    全局本轮已点击 = 1
+
+                    Delay 1000
+
+                End If
+
+                If 武器箱已完成 = 0 And 当前等级 < 4 Then
+
+                    FindStr 157, 333, 198, 449, "武器箱", "6ABB22-303030|56971B-303030", 0.9, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【状态1-武器箱】识别到【武器箱】，开始流程"
+
+                        FindStr 148, 449, 213, 509, "使用", "7BB5C9-303030|7AB5C9-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【状态1-武器箱】识别到【使用】，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 800
+
+                            FindStr 202, 602, 240, 677, "确认", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                            If intX > -1 And intY > -1 Then
+
+                                TracePrint "【状态1-武器箱】识别到【确认A】，点击"
+
+                                Tap intX, intY
+
+                                全局本轮已点击 = 1
+
+                                Delay 1000
+
+                                武器箱已完成 = 1
+
+                                TracePrint "【状态1-武器箱】标记完成（剩余使用→确认B由常规流程处理）"
+
+                            End If
+
+                        End If
+
+                    End If
+
+                End If
+
+                If 需重置状态 = 0 Then
+
+                    FindStr 148, 449, 213, 509, "使用", "7BB5C9-303030|7AB5C9-303030", 0.9, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【状态1】识别到【使用】，点击"
+
+                        Tap intX, intY
+
+                        全局本轮已点击 = 1
+
+                        Delay 800
+
+                        FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【状态1】识别到【确认B】，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1000
+
+                            需重置状态 = 1
+
+                        End If
+
+                    End If
+
+                End If
+
+                If 需重置状态 = 0 Then
+
+                    FindStr 487, 1042, 539, 1105, "首充", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【状态1】识别到【首充】，点击关闭"
+
+                        Tap intX, intY
+
+                        全局本轮已点击 = 1
+
+                        Delay 1000
+
+                    End If
+
+                    FindStr 663, 52, 693, 170, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【状态1】识别到【新手结束】区域1，点击"
+
+                        Tap intX, intY
+
+                        全局本轮已点击 = 1
+
+                        Delay 1000
+
+                    Else
+
+                        FindStr 1002, 7, 1273, 94, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【状态1】识别到【新手结束】区域2，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1000
+
+                        End If
+
+                    End If
+
+                    FindStr 644, 983, 712, 1177, "新手", "FFFFFF-303030", 0.8, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【状态1】识别到【新手】，点击"
+
+                        Tap intX, intY
+
+                        全局本轮已点击 = 1
+
+                        Delay 1000
+
+                    End If
+
+                    If 武器箱已完成 = 0 And 当前等级 < 4 Then
+
+                        FindStr 202, 602, 240, 677, "确认", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【状态1】兜底识别到【确认A】，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1000
+
+                            武器箱已完成 = 1
+
+                        Else
+
+                            FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+                            If intX > -1 And intY > -1 Then
+
+                                TracePrint "【状态1】兜底识别到【确认B】，点击"
+
+                                Tap intX, intY
+
+                                全局本轮已点击 = 1
+
+                                Delay 1000
+
+                                需重置状态 = 1
+
+                            End If
+
+                        End If
+
+                    Else
+
+                        FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【状态1】兜底识别到【确认B】，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1000
+
+                            需重置状态 = 1
+
+                        End If
+
+                    End If
+
+                End If
+
+                If 需重置状态 = 1 Then
+
+                    TracePrint "【状态1】确认B已点击，检测后续"
+
+                    FindStr 528, 938, 634, 1227, "点击后可接取", "FFFFFF-303030|ECECEC-303030|D7D8D9-303030", 0.8, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【状态1】确认B后识别到【点击后可接取】，正常进入状态0"
+
+                    Else
+
+                        TracePrint "【状态1】确认B后未识别到【点击后可接取】，先识别x关闭弹窗"
+
+                        FindStr 661, 28, 693, 60, "x", "FFFFFF-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【状态1】确认B后识别到【x】，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1000
+
+                        End If
+
+                        FindStr 528, 938, 634, 1227, "点击后可接取", "FFFFFF-303030|ECECEC-303030|D7D8D9-303030", 0.8, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【状态1】关x后识别到【点击后可接取】，正常进入状态0"
+
+                        Else
+
+                            TracePrint "【状态1】关x后仍未识别到【点击后可接取】，扫描兜底"
+
+                            FindStr 487, 1042, 539, 1105, "首充", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                            If intX > -1 And intY > -1 Then
+
+                                TracePrint "【状态1】确认B后识别到【首充】，点击关闭"
+
+                                Tap intX, intY
+
+                                全局本轮已点击 = 1
+
+                                Delay 1000
+
+                            End If
+
+                            FindStr 663, 52, 693, 170, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                            If intX > -1 And intY > -1 Then
+
+                                TracePrint "【状态1】确认B后识别到【新手结束】区域1，点击"
+
+                                Tap intX, intY
+
+                                全局本轮已点击 = 1
+
+                                Delay 1000
+
+                            Else
+
+                                FindStr 1002, 7, 1273, 94, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                                If intX > -1 And intY > -1 Then
+
+                                    TracePrint "【状态1】确认B后识别到【新手结束】区域2，点击"
+
+                                    Tap intX, intY
+
+                                    全局本轮已点击 = 1
+
+                                    Delay 1000
+
+                                End If
+
+                            End If
+
+                            FindStr 644, 983, 712, 1177, "新手", "FFFFFF-303030", 0.8, intX, intY
+
+                            If intX > -1 And intY > -1 Then
+
+                                TracePrint "【状态1】确认B后识别到【新手】，点击"
+
+                                Tap intX, intY
+
+                                全局本轮已点击 = 1
+
+                                Delay 1000
+
+                            End If
+
+                            FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+                            If intX > -1 And intY > -1 Then
+
+                                TracePrint "【状态1】确认B后兜底识别到【确认B】，点击"
+
+                                Tap intX, intY
+
+                                全局本轮已点击 = 1
+
+                                Delay 1000
+
+                            End If
+
+                        End If
+
+                    End If
+
+                    任务状态 = 0
+
+                    上次距离 = -1
+
+                    最后靠近时间 = TickCount()
+
+                    距离不变计时 = TickCount()
+
+                    点击后检测中 = 0
+
+                    点击后检测计时 = 0
+
+                    点击时的距离值 = -1
+
+                    等待接取中 = 0
+
+                    接取等待时间 = 0
+
+                    遮挡清理开始时间 = 0
+
+                    TracePrint "【状态1】重置状态机回状态0"
+
+                End If
+
+            End If
+
+            If 任务状态 = 0 Then
+
+                FindStr 519, 1128, 636, 1180, "完成", "6DFF94-303030|6AF696-303030|6CFB95-303030", 0.8, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【状态0】识别到【完成】，点击"
+
+                    Tap intX, intY
+
+                    全局本轮已点击 = 1
+
+                    Delay 1000
+
+                    FindStr 148, 449, 213, 509, "使用", "7BB5C9-303030|7AB5C9-303030", 0.9, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【状态0】完成后识别到【使用】，点击"
+
+                        Tap intX, intY
+
+                        全局本轮已点击 = 1
+
+                        Delay 800
+
+                    End If
+
+                    Dim 状态0确认B开始
+
+                    状态0确认B开始 = TickCount()
+
+                    Do
+
+                        FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+                        If intX > -1 And intY > -1 Then
+
+                            TracePrint "【状态0】完成/使用后识别到【确认B】，点击"
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1000
+
+                            Exit Do
+
+                        End If
+
+                        If (TickCount() - 状态0确认B开始) >= 5000 Then
+
+                            TracePrint "【状态0】完成/使用后5秒未识别到【确认B】，继续后续流程"
+
+                            Exit Do
+
+                        End If
+
+                        Delay 300
+
+                    Loop
+
+                End If
+
+                FindStr 113, 598, 267, 872, "接取", "6AB3ED-303030|6CBAF7-303030", 0.9, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【状态0】识别到【接取】，点击 → 进入状态1"
+
+                    Tap intX, intY
+
+                    全局本轮已点击 = 1
+
+                    Delay 1000
+
+                    任务状态 = 1
+
+                    等待接取中 = 0
+
+                    遮挡清理开始时间 = 0
+
+                End If
+
+                If 任务状态 = 0 And 等待接取中 = 1 And (TickCount() - 接取等待时间) >= 5000 Then
+
+                    If 遮挡清理开始时间 = 0 Then
+
+                        遮挡清理开始时间 = TickCount()
+
+                        TracePrint "【状态0】开始遮挡弹窗清理计时（已等5秒未出现接取）"
+
+                    End If
+
+                    If (TickCount() - 遮挡清理开始时间) < 10000 Then
+
+                        TracePrint "【状态0】执行遮挡弹窗清理（已耗时 " & (TickCount() - 遮挡清理开始时间) & "ms）"
+
+                        Call 清理遮挡弹窗()
+
+                        接取等待时间 = TickCount()
+
+                    Else
+
+                        TracePrint "【状态0】遮挡清理超过10秒，强制跳过"
+
+                        等待接取中 = 0
+
+                        接取等待时间 = 0
+
+                        遮挡清理开始时间 = 0
+
+                    End If
+
+                End If
+
+                If 任务状态 = 0 And 等待接取中 = 0 Then
+
+                    FindStr 528, 938, 634, 1227, "点击后可接取", "FFFFFF-303030|ECECEC-303030|D7D8D9-303030", 0.8, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        If 当前等级 >= 3 And 宠物流程已执行 = 0 Then
+
+                            If 宠物流程开始时间 = 0 Then
+
+                                宠物流程开始时间 = TickCount()
+
+                                TracePrint "【宠物流程】等级≥3，开始等待识别宠物"
+
+                            End If
+
+                            FindStr 28, 1035, 87, 1090, "宠物", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                            If intX > -1 And intY > -1 Then
+
+                                TracePrint "【宠物流程】识别到【宠物】，点击"
+
+                                Tap intX, intY
+
+                                全局本轮已点击 = 1
+
+                                Delay 500
+
+                                Dim 宠物等待开始
+
+                                宠物等待开始 = TickCount()
+
+                                Do
+
+                                    FindStr 38, 1068, 73, 1143, "装备", "6FC0FF-303030|6FBFFD-303030", 0.9, intX, intY
+
+                                    If intX > -1 And intY > -1 Then
+
+                                        TracePrint "【宠物流程】识别到【装备】，点击"
+
+                                        Tap intX, intY
+
+                                        全局本轮已点击 = 1
+
+                                        Delay 800
+
+                                        FindStr 669, 1213, 715, 1269, "X", "BFBFBF-303030", 0.8, intX, intY
+
+                                        If intX > -1 And intY > -1 Then
+
+                                            TracePrint "【宠物流程】点击装备后，点击X关闭"
+
+                                            Tap intX, intY
+
+                                            全局本轮已点击 = 1
+
+                                            Delay 800
+
+                                        End If
+
+                                        宠物流程已执行 = 1
+
+                                        宠物流程开始时间 = 0
+
+                                        Exit Do
+
+                                    End If
+
+                                    FindStr 38, 1068, 73, 1143, "卸下", "6FC0FF-303030|6FBFFD-303030", 0.9, intX, intY
+
+                                    If intX > -1 And intY > -1 Then
+
+                                        TracePrint "【宠物流程】识别到【卸下】，点击X关闭"
+
+                                        FindStr 669, 1213, 715, 1269, "X", "BFBFBF-303030", 0.8, intX, intY
+
+                                        If intX > -1 And intY > -1 Then
+
+                                            Tap intX, intY
+
+                                            全局本轮已点击 = 1
+
+                                            Delay 800
+
+                                        End If
+
+                                        宠物流程已执行 = 1
+
+                                        宠物流程开始时间 = 0
+
+                                        Exit Do
+
+                                    End If
+
+                                    If (TickCount() - 宠物等待开始) >= 3000 Then
+
+                                        TracePrint "【宠物流程】3秒未识别到装备/卸下，跳过"
+
+                                        宠物流程已执行 = 1
+
+                                        宠物流程开始时间 = 0
+
+                                        Exit Do
+
+                                    End If
+
+                                    Delay 500
+
+                                Loop
+
+                            Else
+
+                                If (TickCount() - 宠物流程开始时间) >= 10000 Then
+
+                                    TracePrint "【宠物流程】10秒未识别到宠物，强制跳过"
+
+                                    宠物流程已执行 = 1
+
+                                    宠物流程开始时间 = 0
+
+                                End If
+
+                            End If
+
+                        Else
+
+                            TracePrint "【状态0】识别到【点击后可接取】，点击"
+
+                            全局点击后可接取X = intX
+
+                            全局点击后可接取Y = intY
+
+                            Tap intX, intY
+
+                            全局本轮已点击 = 1
+
+                            Delay 1500
+
+                            等待接取中 = 1
+
+                            接取等待时间 = TickCount()
+
+                            遮挡清理开始时间 = 0
+
+                            If 点击后等待接取() Then
+
+                                TracePrint "【状态0】点击后等待到【接取】→ 进入状态1"
+
+                                任务状态 = 1
+
+                                等待接取中 = 0
+
+                                遮挡清理开始时间 = 0
+
+                            Else
+
+                                TracePrint "【状态0】点击后5秒未出现【接取】，搜索确认B"
+
+                                FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+                                If intX > -1 And intY > -1 Then
+
+                                    TracePrint "【状态0】识别到【确认B】，点击"
+
+                                    Tap intX, intY
+
+                                    全局本轮已点击 = 1
+
+                                    Delay 1000
+
+                                End If
+
+                            End If
+
+                        End If
+
+                    End If
+
+                End If
+
+            End If
+
+           FindStr 133, 1200, 181, 1249, "X", "BFBFBF-303030", 0.8, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               Tap intX, intY
+
+               全局本轮已点击 = 1
+
+               Delay 500
+
+           End If
+
+           If (TickCount() - 距离检测计时) >= 5000 Then
+
+               距离检测计时 = TickCount()
+
+               If 全局本轮已点击 = 1 Then
+
+                   If OCR空计数 > 0 Then
+
+                       TracePrint "【步骤2】本轮有点击操作，重置OCR空计数"
+
+                   End If
+
+                   OCR空计数 = 0
+
+                   OCR空开始时间 = 0
+
+               End If
+
+               Dim 当前距离Str, 当前距离
+
+               当前距离Str = Ocr(517, 1168, 638, 1225, "DCF102-303030|BACC05-303030|B9CC05-303030", 0.8)
+
+               If 当前距离Str = "" Then
+
+                   TracePrint "【步骤2】距离Ocr为空"
+
+                   If OCR空计数 = 0 Then
+
+                       OCR空开始时间 = TickCount()
+
+                   End If
+
+                   OCR空计数 = OCR空计数 + 1
+
+                   TracePrint "【步骤2】OCR空计数: " & OCR空计数
+
+                   FindStr 635, 1117, 684, 1206, "跳过", "FFFFFF-303030|D7D8D9-303030", 0.8, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤2】识别到【跳过】，点击"
+
+                       Tap intX, intY
+
+                       全局本轮已点击 = 1
+
+                       Delay 800
+
+                   End If
+
+                   If OCR空计数 >= 8 Then
+
+                       TracePrint "【步骤2】OCR空8次，触发全面检查"
+
+                       If 全面检查() = True Then
+
+                           TracePrint "【步骤2】全面检查已点击弹窗，设等待接取中=1让正常流程接管"
+
+                           全面检查未点击次数 = 0
+
+                           等待接取中 = 1
+
+                           接取等待时间 = TickCount()
+
+                           遮挡清理开始时间 = 0
+
+                       Else
+
+                           TracePrint "【步骤2】全面检查未点击到弹窗"
+
+                           全面检查未点击次数 = 全面检查未点击次数 + 1
+
+                           If 全面检查未点击次数 >= 2 Then
+
+                               TracePrint "【步骤2】连续2次全面检查未点击到弹窗，执行兜底重启"
+
+                               Call 重启游戏("com.hi4fun.ldsgjlyq", 20000)
+
+                               TracePrint "【步骤2】游戏已杀，返回主流程由步骤1接管"
+
+                               Exit Sub
+
+                           End If
+
+                       End If
+
+                       OCR空计数 = 0
+
+                   End If
+
+                   If OCR空开始时间 > 0 And (TickCount() - OCR空开始时间) >= 180000 Then
+
+                       TracePrint "【步骤2】OCR持续为空3分钟，执行兜底重启"
+
+                       Call 重启游戏("com.hi4fun.ldsgjlyq", 20000)
+
+                       TracePrint "【步骤2】游戏已杀，返回主流程由步骤1接管"
+
+                       Exit Sub
+
+                   End If
+
+                   FindStr 133, 1200, 181, 1249, "X", "BFBFBF-303030", 0.8, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       Tap intX, intY
+
+                       全局本轮已点击 = 1
+
+                       Delay 500
+
+                   End If
+
+               Else
+
+                   If OCR空计数 > 0 Then
+
+                       TracePrint "【步骤2】OCR恢复有效，重置所有距离计时"
+
+                       OCR空计数 = 0
+
+                       OCR空开始时间 = 0
+
+                       全面检查未点击次数 = 0
+
+                       上次距离 = -1
+
+                       最后靠近时间 = TickCount()
+
+                       距离不变计时 = TickCount()
+
+                       点击后检测中 = 0
+
+                       点击后检测计时 = 0
+
+                       点击时的距离值 = -1
+
+                       距离不变次数 = 0
+
+                       点击后距离不变次数 = 0
+
+                   End If
+
+                   当前距离 = 当前距离Str * 1
+
+                   TracePrint "【步骤2】距离OCR: " & 当前距离
+
+                  If 点击后检测中 = 1 Then
+
+                      If 当前距离 <> 点击时的距离值 Then
+
+                          TracePrint "【步骤2】点击后距离已变化 " & 点击时的距离值 & " → " & 当前距离 & "，取消重启检测"
+
+                          点击后检测中 = 0
+
+                          点击后检测计时 = 0
+
+                          点击时的距离值 = -1
+
+                          点击后距离不变次数 = 0
+
+                          距离不变次数 = 0
+
+                          上次距离 = 当前距离
+
+                      Else
+
+                          TracePrint "【步骤2】点击后距离仍不变: " & 当前距离 & "，当前点击阶段=" & 点击后距离不变次数
+
+                          If 点击后距离不变次数 = 1 Then
+
+                              TracePrint "【步骤2】第一次点击后距离仍不变，再点击第二次距离数字"
+
+                              FindStr 517, 1168, 638, 1225, CStr(当前距离), "DCF102-303030|BACC05-303030|B9CC05-303030", 0.8, intX, intY
+
+                              If intX > -1 And intY > -1 Then
+
+                                  Tap intX, intY
+
+                                  TracePrint "【步骤2】第二次已点击识别到的距离数字"
+
+                              Else
+
+                                  If 全局点击后可接取X > -1 And 全局点击后可接取Y > -1 Then
+
+                                      Tap 全局点击后可接取X, 全局点击后可接取Y
+
+                                      TracePrint "【步骤2】第二次未识别到距离数字位置，兜底点击上次点击后可接取坐标: " & 全局点击后可接取X & "," & 全局点击后可接取Y
+
+                                  Else
+
+                                      Tap 575, 1195
+
+                                      TracePrint "【步骤2】第二次未识别到距离数字位置，且没有点击后可接取记录，兜底点击575,1195"
+
+                                  End If
+
+                              End If
+
+                              全局本轮已点击 = 1
+
+                              Delay 500
+
+                              点击后距离不变次数 = 2
+
+                              点击后检测计时 = TickCount()
+
+                          Else
+
+                              TracePrint "【步骤2】第二次点击后距离仍不变，直接重启游戏"
+
+                              Call 重启游戏("com.hi4fun.ldsgjlyq", 20000)
+
+                              TracePrint "【步骤2】游戏已杀，返回主流程由步骤1接管"
+
+                              Exit Sub
+
+                          End If
+
+                      End If
+
+                  Else
+
+                      If 上次距离 = -1 Then
+
+                          上次距离 = 当前距离
+
+                          距离不变次数 = 0
+
+                          TracePrint "【步骤2】距离初始化: " & 当前距离
+
+                      ElseIf 当前距离 = 上次距离 Then
+
+                          距离不变次数 = 距离不变次数 + 1
+
+                          TracePrint "【步骤2】距离不变: " & 当前距离 & " (" & 距离不变次数 & "/2)"
+
+                          If 距离不变次数 >= 2 Then
+
+                              TracePrint "【步骤2】距离连续2次不变，识别并点击数字距离坐标"
+
+                              FindStr 517, 1168, 638, 1225, CStr(当前距离), "DCF102-303030|BACC05-303030|B9CC05-303030", 0.8, intX, intY
+
+                              If intX > -1 And intY > -1 Then
+
+                                  Tap intX, intY
+
+                                  TracePrint "【步骤2】已点击识别到的距离数字"
+
+                              Else
+
+                                  If 全局点击后可接取X > -1 And 全局点击后可接取Y > -1 Then
+
+                                      Tap 全局点击后可接取X, 全局点击后可接取Y
+
+                                      TracePrint "【步骤2】未识别到距离数字位置，兜底点击上次点击后可接取坐标: " & 全局点击后可接取X & "," & 全局点击后可接取Y
+
+                                  Else
+
+                                      Tap 575, 1195
+
+                                      TracePrint "【步骤2】未识别到距离数字位置，且没有点击后可接取记录，兜底点击575,1195"
+
+                                  End If
+
+                              End If
+
+                              全局本轮已点击 = 1
+
+                              Delay 500
+
+                              点击后检测中 = 1
+
+                              点击后检测计时 = TickCount()
+
+                              点击时的距离值 = 当前距离
+
+                              点击后距离不变次数 = 1
+
+                              距离不变次数 = 0
+
+                              TracePrint "【步骤2】已第一次点击距离数字；下次OCR仍不变则再点一次，记录值=" & 点击时的距离值
+
+                          End If
+
+                      Else
+
+                          TracePrint "【步骤2】距离变化 " & 上次距离 & " → " & 当前距离 & "，重置不变次数"
+
+                          上次距离 = 当前距离
+
+                          距离不变次数 = 0
+
+                          点击后距离不变次数 = 0
+
+                      End If
+
+                  End If
+
+               End If
+
+           End If
+
+           If 警备队长已执行 = 0 And 当前等级 >= 9 And 当前等级 < 10 Then
+
+               FindStr 583, 950, 625, 1007, "与皇", "FFFFFF-303030|C0BDB7-303030", 0.8, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤2】识别到【与皇室警备队长】"
+
+                   Dim 警备队长距离Str, 警备队长距离
+
+                   警备队长距离Str = Ocr(517, 1168, 638, 1225, "DCF102-303030|BACC05-303030|B9CC05-303030", 0.8)
+
+                   If 警备队长距离Str <> "" Then
+
+                       警备队长距离 = 警备队长距离Str * 1
+
+                       TracePrint "【步骤2】警备队长距离: " & 警备队长距离
+
+                       If 警备队长上次距离 = -1 Then
+
+                           警备队长上次距离 = 警备队长距离
+
+                       ElseIf 警备队长距离 = 警备队长上次距离 Then
+
+                           警备队长距离不变次数 = 警备队长距离不变次数 + 1
+
+                           TracePrint "【步骤2】警备队长距离不变(" & 警备队长距离不变次数 & "/2)"
+
+                           If 警备队长距离不变次数 >= 2 And 警备队长距离 < 20 Then
+
+                               TracePrint "【步骤2】警备队长距离不变2次且<20，点击607,1076两次"
+
+                               Tap 607, 1076
+
+                               Delay 2000
+
+                               Tap 607, 1076
+
+                               Delay 2000
+
+                               警备队长已执行 = 1
+
+                               任务状态 = 0
+
+                               上次距离 = -1
+
+                               最后靠近时间 = TickCount()
+
+                               距离不变计时 = TickCount()
+
+                               点击后检测中 = 0
+
+                               点击后检测计时 = 0
+
+                               点击时的距离值 = -1
+
+                               等待接取中 = 0
+
+                               接取等待时间 = 0
+
+                               遮挡清理开始时间 = 0
+
+                               TracePrint "【步骤2】警备队长流程完成，重置状态机回状态0"
+
+                           End If
+
+                       Else
+
+                           警备队长距离不变次数 = 0
+
+                           警备队长上次距离 = 警备队长距离
+
+                       End If
+
+                   End If
+
+               End If
+
+           End If
+
+           Delay 500
+
+       End If
+
+   Loop
+
+   TracePrint "【步骤2】结束前清理新手/确认/弹窗"
+
+   Dim 步骤2收尾开始
+
+   步骤2收尾开始 = TickCount()
+
+   Do
+
+       If 清理常见弹窗("步骤2结束清理") = True Then
+
+           Delay 500
+
+       Else
+
+           Call 检测并点击新手()
+
+           Call 清理遮挡弹窗()
+
+           Delay 500
+
+       End If
+
+       If (TickCount() - 步骤2收尾开始) >= 5000 Then
+
+           Exit Do
+
+       End If
+
+   Loop
+
+   TracePrint ">>> 步骤2结束"
+
+End Sub
+
+Sub 步骤3_每日任务()
+
+   Dim intX, intY
+
+   Dim 步骤状态
+
+   步骤状态 = 0
+
+   UseDict 3
+
+   TracePrint "【步骤3】每日任务流程启动"
+
+   Do
+
+       Call 检测并点击新手()
+
+       Select Case 步骤状态
+
+           Case 0
+
+               Dim 每日必做开始
+
+               每日必做开始 = TickCount()
+
+               Do
+
+                   FindStr 649, 988, 670, 1054, "每日必做", "D7D8D9-303030|CFCCCB-303030|FFFFFF-303030", 0.8, intX, intY
+
+                   If intX > -1 And intY > -1 Then Exit Do
+
+                   If (TickCount() - 每日必做开始) >= 2000 Then Exit Do
+
+                   Delay 300
+
+               Loop
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤3】识别到【每日必做】，点击"
+
+                   Tap intX, intY
+
+                   Delay 1500
+
+                   步骤状态 = 1
+
+               Else
+
+                   TracePrint "【步骤3】2秒未识别到【每日必做】，兜底点击683,1018"
+
+                   Tap 683, 1018
+
+                   Delay 1500
+
+                   步骤状态 = 1
+
+               End If
+
+           Case 1
+
+               FindStr 599, 188, 639, 311, "每日任务", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤3】识别到【每日任务】，点击"
+
+                   Tap intX, intY
+
+                   Delay 1500
+
+                   步骤状态 = 2
+
+               Else
+
+                   TracePrint "【步骤3】未识别到【每日任务】，重新点击【每日必做】"
+
+                   步骤状态 = 0
+
+               End If
+
+           Case 2
+
+               FindStr 37, 978, 81, 1159, "立即前往", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤3】识别到【立即前往】，点击"
+
+                   Tap intX, intY
+
+                   Delay 1500
+
+                   步骤状态 = 3
+
+               Else
+
+                   TracePrint "【步骤3】未识别到【立即前往】，每日任务全部完成"
+
+                   Exit Do
+
+               End If
+
+           Case 3
+
+               FindStr 32, 1110, 71, 1195, "接取", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤3】识别到【接取】，点击"
+
+                   Tap intX, intY
+
+                   Delay 1500
+
+                   步骤状态 = 4
+
+               End If
+
+           Case 4
+
+               FindStr 179, 443, 247, 513, "√", "FFFFFF-303030|F5EEF3", 0.8, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤3】识别到【√】，直接点击接取"
+
+                   FindStr 92, 637, 195, 841, "接取", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       Tap intX, intY
+
+                       Delay 1500
+
+                   End If
+
+               Else
+
+                   TracePrint "【步骤3】未识别到【√】，点击坐标211,473"
+
+                   Tap 211, 473
+
+                   Delay 1000
+
+                   FindStr 92, 637, 195, 841, "接取", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤3】点击坐标后识别到【接取】，点击"
+
+                       Tap intX, intY
+
+                       Delay 1500
+
+                   End If
+
+               End If
+
+               FindStr 86, 691, 118, 800, "选择完成", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤3】识别到【选择完成】，点击"
+
+                   Tap intX, intY
+
+                   Delay 1000
+
+               End If
+
+               步骤状态 = 5
+
+           Case 5
+
+               FindStr 240, 696, 272, 735, "是", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤3】识别到【是】，点击"
+
+                   Tap intX, intY
+
+                   Delay 1000
+
+               Else
+
+                   TracePrint "【步骤3】未识别到【是】，跳过"
+
+               End If
+
+               步骤状态 = 6
+
+           Case 6
+
+               FindStr 669, 1213, 714, 1266, "x", "BFBFBF", 0.8, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤3】识别到【x】，点击并进入下一个任务"
+
+                   Tap intX, intY
+
+                   Delay 1000
+
+                   步骤状态 = 2
+
+               Else
+
+                   TracePrint "【步骤3】未识别到【x】，等待15秒"
+
+                   Delay 15000
+
+                   FindStr 669, 1213, 714, 1266, "x", "BFBFBF", 0.8, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤3】等待后识别到【x】，点击"
+
+                       Tap intX, intY
+
+                       Delay 1000
+
+                   End If
+
+                   步骤状态 = 2
+
+               End If
+
+       End Select
+
+       Delay 500
+
+   Loop
+
+   TracePrint "【步骤3】所有每日任务处理完毕，开始收尾流程"
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 577, 994, 642, 1072, "充值", "52A8CC-303030|4F9FC2-303030|C9EEFF-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【充值】，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Dim 支线每日必做开始
+
+   支线每日必做开始 = TickCount()
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 649, 988, 670, 1054, "每日必做", "D7D8D9-303030|CFCCCB-303030|FFFFFF-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【每日必做】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       If (TickCount() - 支线每日必做开始) >= 2000 Then
+
+           TracePrint "【步骤3】支线入口2秒未识别到【每日必做】，兜底点击683,1018"
+
+           Tap 683, 1018
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 599, 188, 639, 311, "每日任务", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【每日任务】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 37, 978, 81, 1159, "立即前往", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【立即前往】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   TracePrint "【步骤3】等待识别【4/5】，同时检测锚点..."
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 56, 340, 98, 437, "4/5", "FFFFFF-303030|CAC8C6-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【4/5】，进入任务等待循环"
+
+           Exit Do
+
+       End If
+
+       FindStr 37, 978, 81, 1159, "立即前往", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】等待过程中识别到锚点【立即前往】，还在任务列表页，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+       Else
+
+           FindStr 649, 988, 670, 1054, "每日必做", "D7D8D9-303030|CFCCCB-303030|FFFFFF-303030", 0.8, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤3】等待过程中识别到锚点【每日必做】，被弹回主界面，重新进入流程"
+
+               Tap intX, intY
+
+               Delay 1500
+
+               Do
+
+                   Call 检测并点击新手()
+
+                   FindStr 599, 188, 639, 311, "每日任务", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤3】重新识别到【每日任务】，点击"
+
+                       Tap intX, intY
+
+                       Delay 1500
+
+                       Exit Do
+
+                   End If
+
+                   Delay 500
+
+               Loop
+
+               Do
+
+                   Call 检测并点击新手()
+
+                   FindStr 37, 978, 81, 1159, "立即前往", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤3】重新识别到【立即前往】，点击"
+
+                       Tap intX, intY
+
+                       Delay 1500
+
+                       Exit Do
+
+                   End If
+
+                   Delay 500
+
+               Loop
+
+           End If
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Dim 任务完成持续检测开始, 任务完成持续识别
+
+   任务完成持续检测开始 = 0
+
+   任务完成持续识别 = 0
+
+   TracePrint "【步骤3】进入任务等待循环，8秒窗口期内持续检测【任务完成】..."
+
+   Do
+
+       Do
+
+           Call 检测并点击新手()
+
+           FindStr 56, 340, 98, 437, "4/5", "FFFFFF-303030|CAC8C6-303030", 0.8, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               Exit Do
+
+           End If
+
+           FindStr 37, 978, 81, 1159, "立即前往", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤3】【循环】在任务列表页，点击【立即前往】"
+
+               Tap intX, intY
+
+               Delay 1500
+
+           Else
+
+               FindStr 649, 988, 670, 1054, "每日必做", "D7D8D9-303030|CFCCCB-303030|FFFFFF-303030", 0.8, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤3】【循环】在主界面，重新进入流程"
+
+                   Tap intX, intY
+
+                   Delay 1500
+
+                   Do
+
+                       Call 检测并点击新手()
+
+                       FindStr 599, 188, 639, 311, "每日任务", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+                       If intX > -1 And intY > -1 Then
+
+                           Tap intX, intY
+
+                           Delay 1500
+
+                           Exit Do
+
+                       End If
+
+                       Delay 500
+
+                   Loop
+
+                   Do
+
+                       Call 检测并点击新手()
+
+                       FindStr 37, 978, 81, 1159, "立即前往", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+                       If intX > -1 And intY > -1 Then
+
+                           Tap intX, intY
+
+                           Delay 1500
+
+                           Exit Do
+
+                       End If
+
+                       Delay 500
+
+                   Loop
+
+               End If
+
+           End If
+
+           Delay 500
+
+       Loop
+
+       Dim 窗口开始时间, 已识别完成
+
+       窗口开始时间 = TickCount()
+
+       已识别完成 = False
+
+       TracePrint "【步骤3】【循环】进入8秒窗口期，持续检测【任务完成】..."
+
+       Do
+
+           Call 检测并点击新手()
+
+           If (TickCount() - 窗口开始时间) >= 8000 Then
+
+               TracePrint "【步骤3】【循环】8秒窗口期结束，未识别到任务完成"
+
+               Exit Do
+
+           End If
+
+           FindStr 56, 340, 98, 437, "4/5", "FFFFFF-303030|CAC8C6-303030", 0.8, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               FindStr 34, 1092, 67, 1210, "任务完成", "6FC0FF-303030|6BB5EF-303030", 0.8, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   If 任务完成持续识别 = 0 Then
+
+                       任务完成持续检测开始 = TickCount()
+
+                       任务完成持续识别 = 1
+
+                       TracePrint "【步骤3】【循环】首次识别到【任务完成】，开始2秒持续检测"
+
+                   Else
+
+                       If (TickCount() - 任务完成持续检测开始) >= 2000 Then
+
+                           TracePrint "【步骤3】【循环】2秒内持续识别到【任务完成】，点击"
+
+                           Tap intX, intY
+
+                           Delay 1000
+
+                           已识别完成 = True
+
+                           Exit Do
+
+                       End If
+
+                   End If
+
+               Else
+
+                   If 任务完成持续识别 = 1 Then
+
+                       TracePrint "【步骤3】【循环】【任务完成】检测中断，重置计时"
+
+                       任务完成持续识别 = 0
+
+                       任务完成持续检测开始 = 0
+
+                   End If
+
+               End If
+
+           Else
+
+               If 任务完成持续识别 = 1 Then
+
+                   TracePrint "【步骤3】【循环】8秒窗口期中被弹离4/5页面，重置检测"
+
+                   任务完成持续识别 = 0
+
+                   任务完成持续检测开始 = 0
+
+               End If
+
+               FindStr 37, 978, 81, 1159, "立即前往", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+               If intX > -1 And intY > -1 Then
+
+                   TracePrint "【步骤3】【循环】被弹到任务列表，点击【立即前往】"
+
+                   Tap intX, intY
+
+                   Delay 1500
+
+               Else
+
+                   FindStr 649, 988, 670, 1054, "每日必做", "D7D8D9-303030|CFCCCB-303030|FFFFFF-303030", 0.8, intX, intY
+
+                   If intX > -1 And intY > -1 Then
+
+                       TracePrint "【步骤3】【循环】被弹回主界面，重新进入流程"
+
+                       Tap intX, intY
+
+                       Delay 1500
+
+                       Do
+
+                           Call 检测并点击新手()
+
+                           FindStr 599, 188, 639, 311, "每日任务", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+                           If intX > -1 And intY > -1 Then
+
+                               Tap intX, intY
+
+                               Delay 1500
+
+                               Exit Do
+
+                           End If
+
+                           Delay 500
+
+                       Loop
+
+                       Do
+
+                           Call 检测并点击新手()
+
+                           FindStr 37, 978, 81, 1159, "立即前往", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+                           If intX > -1 And intY > -1 Then
+
+                               Tap intX, intY
+
+                               Delay 1500
+
+                               Exit Do
+
+                           End If
+
+                           Delay 500
+
+                       Loop
+
+                   End If
+
+               End If
+
+               Exit Do
+
+           End If
+
+           Delay 200
+
+       Loop
+
+       If 已识别完成 Then
+
+           TracePrint "【步骤3】【循环】任务完成已处理，结束循环"
+
+           Exit Do
+
+       End If
+
+       Call 检测并点击新手()
+
+       FindStr 669, 1213, 714, 1266, "x", "BFBFBF", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】【循环】识别到【x】，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+       Else
+
+           TracePrint "【步骤3】【循环】未识别到【x】，跳过"
+
+       End If
+
+       TracePrint "【步骤3】【循环】本轮结束，进入下一轮..."
+
+   Loop
+
+   TracePrint "【步骤3】任务完成，开始接取支线任务流程..."
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 98, 499, 220, 759, "确认", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【确认】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 669, 1213, 714, 1266, "x", "BFBFBF", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【x】(确认后)，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 649, 988, 670, 1054, "每日必做", "D7D8D9-303030|CFCCCB-303030|FFFFFF-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【每日必做】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 583, 179, 639, 379, "支线任务", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【支线任务】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 37, 978, 81, 1159, "立即前往", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【立即前往】(支线)，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 9, 1039, 93, 1261, "接取", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【接取】(支线1)，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   TracePrint "【步骤3】循环点击【+】直到识别到【7】..."
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 493, 658, 522, 718, "7", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【7】，停止点击+"
+
+           Exit Do
+
+       End If
+
+       FindStr 446, 747, 490, 804, "+", "FFFFFF-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【+】，点击"
+
+           Tap intX, intY
+
+           Delay 500
+
+       Else
+
+           TracePrint "【步骤3】未识别到【+】，等待"
+
+           Delay 500
+
+       End If
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 112, 625, 210, 843, "接取", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【接取】(支线2)，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Dim 是检测开始时间
+
+   是检测开始时间 = TickCount()
+
+   TracePrint "【步骤3】检测【是】，3秒超时..."
+
+   Do
+
+       Call 检测并点击新手()
+
+       If (TickCount() - 是检测开始时间) >= 3000 Then
+
+           TracePrint "【步骤3】3秒内未识别到【是】，跳过"
+
+           Exit Do
+
+       End If
+
+       FindStr 240, 696, 272, 735, "是", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【是】(支线)，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+           Exit Do
+
+       End If
+
+       Delay 200
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 669, 1213, 714, 1266, "x", "BFBFBF", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【x】(支线结束)，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   TracePrint "【步骤3】进入等待升级阶段，每30秒OCR检测等级和识别【新手】..."
+
+   UseDict 2
+
+   Dim ocrchar
+
+   Dim 是否17级
+
+   是否17级 = False
+
+   Dim OCR空次数
+
+   OCR空次数 = 0
+
+   Do
+
+       Delay 30000
+
+       ocrchar = Ocr(7, 514, 27, 550, "CFCCCB-303030|FFFFFF", 0.8)
+
+       TracePrint "【步骤3】OCR识别等级结果: " & ocrchar
+
+       If ocrchar = "18" Then
+
+           TracePrint "【步骤3】OCR识别到等级18，退出等待"
+
+           Exit Do
+
+       End If
+
+       If Not 是否17级 Then
+
+           If ocrchar = "17" Then
+
+               TracePrint "【步骤3】OCR识别到等级17，开始持续检测【新手】"
+
+               是否17级 = True
+
+               全局等级 = 17
+
+           End If
+
+       End If
+
+       If 是否17级 Then
+
+           If ocrchar = "" Then
+
+               OCR空次数 = OCR空次数 + 1
+
+               TracePrint "【步骤3】17级后OCR为空，连续次数: " & OCR空次数
+
+               If OCR空次数 >= 2 Then
+
+                   TracePrint "【步骤3】17级后OCR连续两次为空，点击坐标694,92"
+
+                   Tap 694, 92
+
+                   Delay 1000
+
+                   OCR空次数 = 0
+
+               End If
+
+           Else
+
+               OCR空次数 = 0
+
+           End If
+
+       End If
+
+       Call 检测并点击新手()
+
+   Loop
+
+   TracePrint "【步骤3】等级18，开始使用经验药水..."
+
+   UseDict 3
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 647, 1169, 674, 1218, "背包", "CFCCCB-303030|FFFFFF-303030|F5EEF3", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【背包】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+       Else
+
+           TracePrint "【步骤3】未识别到【背包】，点击坐标687,1192"
+
+           Tap 687, 1192
+
+           Delay 1500
+
+       End If
+
+       FindStr 601, 1179, 643, 1254, "其他", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】背包已打开（识别到【其他】），点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   TracePrint "【步骤3】查找【经验药水】..."
+
+   FindPic 395, 862, 525, 1264, "Attachment:经验药水.png", "101010", 0, 0.9, intX, intY
+
+   If intX > -1 And intY > -1 Then
+
+       TracePrint "【步骤3】找到【经验药水】，点击"
+
+       Tap intX, intY
+
+       Delay 1000
+
+       TracePrint "【步骤3】等待识别【使用】..."
+
+       Do
+
+           Call 检测并点击新手()
+
+           FindStr 60, 1136, 88, 1220, "使用", "6FC0FF-303030|65AAE0-303030", 0.9, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤3】识别到【使用】，点击"
+
+               Tap intX, intY
+
+               Delay 1000
+
+               Exit Do
+
+           End If
+
+           Delay 500
+
+       Loop
+
+   Else
+
+       TracePrint "【步骤3】未找到【经验药水】，直接关闭背包"
+
+   End If
+
+   Call 检测并点击新手()
+
+   FindStr 669, 1213, 714, 1266, "x", "BFBFBF", 0.8, intX, intY
+
+   If intX > -1 And intY > -1 Then
+
+       TracePrint "【步骤3】识别到【x】，关闭背包"
+
+       Tap intX, intY
+
+       Delay 1000
+
+   End If
+
+   TracePrint "【步骤3】开始王国委托任务..."
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 649, 988, 670, 1054, "每日必做", "D7D8D9-303030|CFCCCB-303030|FFFFFF-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【每日必做】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+       Else
+
+           TracePrint "【步骤3】未识别到【每日必做】，点击坐标690,1019"
+
+           Tap 690, 1019
+
+           Delay 1500
+
+       End If
+
+       FindPic 432, 180, 644, 305, "Attachment:王国委托.png", "000000", 0, 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】界面已打开（识别到【王国委托】）"
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   TracePrint "【步骤3】等待识别【王国委托】..."
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindPic 432, 180, 644, 305, "Attachment:王国委托.png", "000000", 0, 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【王国委托】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 37, 978, 81, 1159, "立即前往", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【立即前往】(王国委托)，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 457, 69, 505, 200, "黑暗袭击", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【黑暗袭击】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 20, 892, 83, 1114, "接取", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【接取】(黑暗袭击1)，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 147, 641, 210, 829, "接取", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【接取】(黑暗袭击2)，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 242, 692, 273, 794, "是", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【是】(王国委托)，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   TracePrint "【步骤3】王国委托：同时识别【进入】和【离开】..."
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 389, 1092, 469, 1277, "离开", "6FC0FF-303030|65AAE0-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【离开】，进入等待流程"
+
+           Exit Do
+
+       End If
+
+       FindStr 38, 294, 75, 430, "进入", "FEFEFE-303030|E1E0E0-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【进入】，点击"
+
+           Tap intX, intY
+
+           Delay 1500
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   TracePrint "【步骤3】识别到【离开】，进入15分钟等待，期间每15秒检测【充值】、每5秒检测【新手】..."
+
+   Dim 等待开始时间, 上次充值检测时间, 上次新手检测时间
+
+   等待开始时间 = TickCount()
+
+   上次充值检测时间 = TickCount()
+
+   上次新手检测时间 = TickCount()
+
+   Do
+
+       If (TickCount() - 上次充值检测时间) >= 15000 Then
+
+           Call 检测并点击新手()
+
+           FindStr 577, 994, 642, 1072, "充值", "52A8CC-303030|4F9FC2-303030|C9EEFF-303030", 0.8, intX, intY
+
+           If intX > -1 And intY > -1 Then
+
+               TracePrint "【步骤3】等待期间识别到【充值】，点击"
+
+               Tap intX, intY
+
+               Delay 1000
+
+           End If
+
+           上次充值检测时间 = TickCount()
+
+       End If
+
+       If (TickCount() - 上次新手检测时间) >= 10000 Then
+
+           Call 检测并点击新手()
+
+           上次新手检测时间 = TickCount()
+
+       End If
+
+       If (TickCount() - 等待开始时间) >= 900000 Then
+
+           TracePrint "【步骤3】15分钟等待结束"
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   TracePrint "【步骤3】15分钟等待结束，切换字库2识别【完成】..."
+
+   UseDict 2
+
+   Dim 完成识别结果, 完成重试次数
+
+   完成识别结果 = False
+
+   完成重试次数 = 0
+
+   Do While 完成重试次数 < 30
+
+       Call 检测并点击新手()
+
+       FindStr 519, 1128, 636, 1180, "完成", "6DFF94-303030|6AF696-303030|6CFB95", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【完成】，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+           完成识别结果 = True
+
+           Exit Do
+
+       Else
+
+           完成重试次数 = 完成重试次数 + 1
+
+           TracePrint "【步骤3】未识别到【完成】，第 " & 完成重试次数 & " 次重试..."
+
+           Delay 1000
+
+       End If
+
+   Loop
+
+   If Not 完成识别结果 Then
+
+       TracePrint "【步骤3】报警：30秒内未识别到【完成】，跳过继续"
+
+       ShowMessage "报警：未识别到【完成】", 10000, 0, 0
+
+       Exit Sub
+
+   End If
+
+   TracePrint "【步骤3】点击【完成】后，3秒内检测【充值】（1秒一次）..."
+
+   UseDict 3
+
+   Dim 充值检测开始时间, 识别到充值
+
+   充值检测开始时间 = TickCount()
+
+   识别到充值 = False
+
+   Do
+
+       Call 检测并点击新手()
+
+       If (TickCount() - 充值检测开始时间) >= 3000 Then
+
+           TracePrint "【步骤3】3秒内未识别到【充值】，跳过"
+
+           Exit Do
+
+       End If
+
+       FindStr 577, 994, 642, 1072, "充值", "52A8CC-303030|4F9FC2-303030|C9EEFF-303030", 0.8, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【充值】，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+           识别到充值 = True
+
+           Exit Do
+
+       End If
+
+       Delay 1000
+
+   Loop
+
+   TracePrint "【步骤3】识别【确认】..."
+
+   UseDict 2
+
+   Do
+
+       Call 检测并点击新手()
+
+       FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【步骤3】识别到【确认】，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+           Exit Do
+
+       End If
+
+       Delay 500
+
+   Loop
+
+   UseDict 3
+
+   TracePrint ">>> 步骤3结束"
+
+End Sub
+
+Sub 清理遮挡弹窗()
+
+   Dim intX, intY
+
+   FindStr 663, 52, 693, 170, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+   If intX > -1 And intY > -1 Then
+
+       TracePrint "【遮挡清理】识别到【新手结束】区域1，点击"
+
+       Tap intX, intY
+
+       Delay 1000
+
+       Exit Sub
+
+   End If
+
+   FindStr 1002, 7, 1273, 94, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+   If intX > -1 And intY > -1 Then
+
+       TracePrint "【遮挡清理】识别到【新手结束】区域2，点击"
+
+       Tap intX, intY
+
+       Delay 1000
+
+       Exit Sub
+
+   End If
+
+   FindStr 202, 602, 240, 677, "确认", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+   If intX > -1 And intY > -1 Then
+
+       TracePrint "【遮挡清理】识别到【确认A】，点击"
+
+       Tap intX, intY
+
+       Delay 1000
+
+       FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【遮挡清理】确认A后识别到【确认B】，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+       End If
+
+       Exit Sub
+
+   End If
+
+   FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+   If intX > -1 And intY > -1 Then
+
+       TracePrint "【遮挡清理】识别到【确认B】，点击"
+
+       Tap intX, intY
+
+       Delay 1000
+
+       Exit Sub
+
+   End If
+
+   FindStr 487, 1042, 539, 1105, "首充", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+   If intX > -1 And intY > -1 Then
+
+       TracePrint "【遮挡清理】识别到【首充】，点击关闭"
+
+       Tap intX, intY
+
+       Delay 1000
+
+       Exit Sub
+
+   End If
+
+   FindStr 661, 28, 693, 60, "x", "FFFFFF-303030", 0.9, intX, intY
+
+   If intX > -1 And intY > -1 Then
+
+       TracePrint "【遮挡清理】识别到【x】，点击"
+
+       Tap intX, intY
+
+       Delay 800
+
+       Exit Sub
+
+   End If
+
+   FindStr 133, 1200, 181, 1249, "X", "BFBFBF-303030", 0.8, intX, intY
+
+   If intX > -1 And intY > -1 Then
+
+       TracePrint "【遮挡清理】识别到【对话X】，点击"
+
+       Tap intX, intY
+
+       Delay 500
+
+       Exit Sub
+
+   End If
+
+End Sub
+
+Function 点击后等待接取()
+
+   Dim 重试次数, intX, intY
+
+   重试次数 = 0
+
+   点击后等待接取 = False
+
+   Do While 重试次数 < 4
+
+       FindStr 113, 598, 267, 872, "接取", "6AB3ED-303030|6CBAF7-303030", 0.9, intX, intY
+
+       If intX > -1 And intY > -1 Then
+
+           TracePrint "【接取等待】识别到【接取】，点击"
+
+           Tap intX, intY
+
+           Delay 1000
+
+           点击后等待接取 = True
+
+           Exit Do
+
+       End If
+
+       重试次数 = 重试次数 + 1
+
+       Delay 500
+
+   Loop
+
+   If 重试次数 >= 4 Then
+
+       TracePrint "【接取等待】2秒内未出现【接取】"
+
+   End If
+
+End Function
+
+Function 全面检查()
+
+  Dim intX, intY
+
+  FindStr 663, 52, 693, 170, "新手结束", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+  If intX > -1 And intY > -1 Then
+
+      TracePrint "【全面检查】识别到【新手结束】区域1，点击"
+
+      Tap intX, intY
+
+      Delay 1000
+
+      全面检查 = True
+
+      Exit Function
+
+  End If
+
+  FindStr 644, 983, 712, 1177, "新手", "FFFFFF-303030", 0.8, intX, intY
+
+  If intX > -1 And intY > -1 Then
+
+      TracePrint "【全面检查】识别到【新手结束】区域2，点击"
+
+      Tap intX, intY
+
+      Delay 1000
+
+      全面检查 = True
+
+      Exit Function
+
+  End If
+
+  FindStr 202, 602, 240, 677, "确认", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+  If intX > -1 And intY > -1 Then
+
+      TracePrint "【全面检查】识别到【确认A】，点击"
+
+      Tap intX, intY
+
+      Delay 1000
+
+      FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+      If intX > -1 And intY > -1 Then
+
+          TracePrint "【全面检查】确认A后识别到【确认B】，点击"
+
+          Tap intX, intY
+
+          Delay 1000
+
+      End If
+
+      全面检查 = True
+
+      Exit Function
+
+  End If
+
+  FindStr 94, 495, 303, 820, "确认", "6FC0FF-303030|6BB5EE-303030|5F9DCD-303030", 0.9, intX, intY
+
+  If intX > -1 And intY > -1 Then
+
+      TracePrint "【全面检查】识别到【确认B】，点击"
+
+      Tap intX, intY
+
+      Delay 1000
+
+      全面检查 = True
+
+      Exit Function
+
+  End If
+
+  FindStr 487, 1042, 539, 1105, "首充", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+  If intX > -1 And intY > -1 Then
+
+      TracePrint "【全面检查】识别到【首充】，点击关闭"
+
+      Tap intX, intY
+
+      Delay 1000
+
+      全面检查 = True
+
+      Exit Function
+
+  End If
+
+  FindStr 148, 449, 213, 509, "使用", "7BB5C9-303030|7AB5C9-303030", 0.9, intX, intY
+
+  If intX > -1 And intY > -1 Then
+
+      TracePrint "【全面检查】识别到【使用】，点击"
+
+      Tap intX, intY
+
+      Delay 800
+
+      FindStr 148, 449, 213, 509, "使用", "7BB5C9-303030|7AB5C9-303030", 0.9, intX, intY
+
+      If intX > -1 And intY > -1 Then
+
+          TracePrint "【全面检查】识别到第2个【使用】，点击"
+
+          Tap intX, intY
+
+          Delay 800
+
+      End If
+
+      全面检查 = True
+
+      Exit Function
+
+  End If
+
+  FindStr 661, 28, 693, 60, "x", "FFFFFF-303030", 0.9, intX, intY
+
+  If intX > -1 And intY > -1 Then
+
+      TracePrint "【全面检查】识别到【x】，点击"
+
+      Tap intX, intY
+
+      Delay 800
+
+      全面检查 = True
+
+      Exit Function
+
+  End If
+
+  FindStr 133, 1200, 181, 1249, "X", "BFBFBF-303030", 0.8, intX, intY
+
+  If intX > -1 And intY > -1 Then
+
+      TracePrint "【全面检查】识别到【对话X】，点击"
+
+      Tap intX, intY
+
+      Delay 500
+
+      全面检查 = True
+
+      Exit Function
+
+  End If
+
+  FindStr 528, 938, 634, 1227, "点击后可接取", "FFFFFF-303030|ECECEC-303030|D7D8D9-303030", 0.8, intX, intY
+
+  If intX > -1 And intY > -1 Then
+
+      TracePrint "【全面检查】识别到【点击后可接取】，点击"
+
+      全局点击后可接取X = intX
+
+      全局点击后可接取Y = intY
+
+      Tap intX, intY
+
+      Delay 1500
+
+      If 点击后等待接取() Then
+
+          TracePrint "【全面检查】点击后等待到【接取】并已点击"
+
+      Else
+
+          TracePrint "【全面检查】点击后5秒未出现【接取】"
+
+      End If
+
+      全面检查 = True
+
+      Exit Function
+
+  End If
+
+  FindStr 113, 598, 267, 872, "接取", "6AB3ED-303030|6CBAF7-303030", 0.9, intX, intY
+
+  If intX > -1 And intY > -1 Then
+
+      TracePrint "【全面检查】识别到【接取】，点击"
+
+      Tap intX, intY
+
+      Delay 1000
+
+      全面检查 = True
+
+      Exit Function
+
+  End If
+
+  TracePrint "【全面检查】未发现可处理弹窗"
+
+  全面检查 = False
+
+End Function
+
+Sub 重启游戏(包名, 等待时间)
+   Dim i, 已退出, 已启动
+
+   TracePrint "【重启】开始：先杀进程，等待退出后再重启"
+   已退出 = 0
+   已启动 = 0
+   KillApp 包名
+   Delay 2000
+
+   For i = 1 To 8
+       If Sys.IsRunning(包名) = False Then
+           TracePrint "【重启】进程已退出"
+           已退出 = 1
+           Exit For
+       End If
+       TracePrint "【重启】等待进程退出，第 " & i & " 次"
+       Delay 1000
+   Next
+
+   If 已退出 = 0 Then
+       TracePrint "【重启】未确认进程退出，继续执行启动流程"
+   End If
+
+   TracePrint "【重启】重新启动游戏"
+   RunApp 包名
+   Delay 3000
+
+   For i = 1 To 5
+       If Sys.IsRunning(包名) = True Then
+           TracePrint "【重启】已检测到进程重新启动"
+           已启动 = 1
+           Exit For
+       End If
+       TracePrint "【重启】等待进程启动，第 " & i & " 次"
+       Delay 1000
+   Next
+
+   If 已启动 = 0 Then
+       TracePrint "【重启】未确认进程启动，云手机可能误判，继续等待进入游戏"
+   End If
+
+   Delay 等待时间
+
+   强制步骤1 = 1
+   重启后步骤1 = 1
+   TracePrint "【重启】重启完成，返回主流程后强制走步骤1"
+End Sub
+
+Function 启动应用(包名, 等待时间)
+   Dim 运行状态, i, 已启动
+
+   运行状态 = Sys.isRunning(包名)
+   If 运行状态 = True Then
+       TracePrint "【启动】应用已在运行，无需等待"
+       启动应用 = True
+       Exit Function
+   End If
+
+   已启动 = 0
+   For i = 1 To 2
+       TracePrint "【启动】未确认进程运行，第 " & i & " 次尝试拉起应用"
+       RunApp 包名
+       Delay 3000
+
+       运行状态 = Sys.isRunning(包名)
+       If 运行状态 = True Then
+           TracePrint "【启动】已检测到进程运行"
+           已启动 = 1
+           Exit For
+       End If
+   Next
+
+   If 已启动 = 0 Then
+       TracePrint "【启动】未确认进程运行，云手机可能误判，继续等待进入游戏"
+   End If
+
+   Delay 等待时间
+   启动应用 = True
+End Function
+
+Function 输入英文或数字()
+
+   Dim 字符, 结果, 重试次数
+
+   Randomize
+
+   字符 = "abcdefghijklmnopqrstuvwxyz0123456789"
+
+   重试次数 = 0
+   Do
+       结果 = Mid(字符, Int(Rnd() * 36) + 1, 1)
+       重试次数 = 重试次数 + 1
+       If 结果 <> 上次输入字符 Then Exit Do
+       If 重试次数 >= 5 Then Exit Do
+   Loop
+
+   TracePrint "【输入】随机字符: " & 结果
+
+   InputText 结果
+
+   上次输入字符 = 结果
+
+   Delay 500
+
+End Function
+
+Sub 获取水晶()
+
+    Dim intX, intY
+
+    UseDict 3
+
+    TracePrint "【获取水晶】流程开始"
+
+    TracePrint "【获取水晶】阶段二：活动内水晶领取"
+
+    Call 打开活动()
+    Delay 1500
+
+    TracePrint "【获取水晶】1. 初夏幽享"
+
+    Call 点击初夏幽享()
+
+    TracePrint "【获取水晶】2. 千抽万钻"
+
+    Call 循环识别点击("千抽万钻", 315, 92, 399, 311, "Attachment:千抽万钻.png", "000000", 0.9, 10000)
+
+    Call 循环识别点击("新星旅程", 83, 138, 123, 246, "Attachment:新星旅程.png", "000000", 0.9, 10000)
+
+    TracePrint "【获取水晶】点击坐标342,498"
+
+    Tap 342, 498
+
+    Delay 1500
+
+    Call 检测水晶确认()
+
+    TracePrint "【获取水晶】3. 关闭活动"
+
+    Dim 关闭x开始1
+
+    关闭x开始1 = TickCount()
+
+    Do
+
+        If (TickCount() - 关闭x开始1) >= 2000 Then
+
+            TracePrint "【获取水晶】2秒未识别到x，兜底点击628,1160"
+
+            Tap 628, 1160
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        FindStr 610, 1134, 651, 1184, "x", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【获取水晶】识别到【x】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    TracePrint "【获取水晶】阶段一：领取战力奖励"
+
+    Call 打开活动()
+    Delay 1500
+
+    Call 点击初夏幽享()
+
+    Call 点击福利()
+
+    Call 点击战力()
+
+    Dim 领取成功
+
+    领取成功 = False
+
+    FindPic 378, 1036, 408, 1138, "Attachment:领取奖励.png", "000000", 0, 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【获取水晶】首次识别到【领取奖励】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+        领取成功 = True
+
+    Else
+
+        TracePrint "【获取水晶】未识别到【领取奖励】，先关闭活动，再执行天赋+背包提升战力"
+
+        Do
+
+            FindStr 610, 1134, 651, 1184, "x", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【获取水晶】关闭活动窗口"
+
+                Tap intX, intY
+
+                Delay 1000
+
+                Exit Do
+
+            End If
+
+            Delay 500
+
+        Loop
+
+        Call 天赋流程()
+
+        Call 背包流程()
+
+        Call 打开活动()
+        Delay 1500
+
+        Call 点击初夏幽享()
+
+        Call 点击福利()
+
+        Call 点击战力()
+
+        FindPic 378, 1036, 408, 1138, "Attachment:领取奖励.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【获取水晶】再次识别到【领取奖励】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            领取成功 = True
+
+        Else
+
+            TracePrint "【获取水晶】再次未识别到【领取奖励】，跳过"
+
+        End If
+
+    End If
+
+    If 领取成功 Then
+
+        Dim 确认开始时间
+
+        确认开始时间 = TickCount()
+
+        Do
+
+            If (TickCount() - 确认开始时间) >= 5000 Then
+
+                TracePrint "【获取水晶】5秒内未识别到领取确认，跳过"
+
+                Exit Do
+
+            End If
+
+            FindPic 142, 443, 337, 848, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【获取水晶】领取奖励后识别到【确认】，点击"
+
+                Tap intX, intY
+
+                Delay 1000
+
+                Exit Do
+
+            End If
+
+            Delay 500
+
+        Loop
+
+        Dim 关闭开始时间
+
+        关闭开始时间 = TickCount()
+
+        Do
+
+            If (TickCount() - 关闭开始时间) >= 5000 Then
+
+                TracePrint "【获取水晶】5秒内未识别到关闭x，跳过"
+
+                Exit Do
+
+            End If
+
+            FindStr 610, 1134, 651, 1184, "x", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【获取水晶】识别到【x】，关闭活动"
+
+                Tap intX, intY
+
+                Delay 1000
+
+                Exit Do
+
+            End If
+
+            Delay 500
+
+        Loop
+
+    End If
+
+    FindStr 610, 1134, 651, 1184, "x", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【获取水晶】阶段一兜底：识别到【x】，关闭活动"
+
+        Tap intX, intY
+
+        Delay 1000
+
+    End If
+
+    TracePrint "【等待击杀野怪】阶段三：挂机刷野怪"
+
+    Tap 644, 101
+
+    Delay 2000
+
+    Tap 404, 371
+
+    Delay 2000
+
+    FindStr 547, 172, 576, 256, "蜥蜴", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【等待击杀野怪】识别到【蜥蜴】，点击"
+
+        Tap intX, intY
+
+    Else
+
+        TracePrint "【等待击杀野怪】未识别到【蜥蜴】，直接点击坐标499,212"
+
+        Tap 499, 212
+
+    End If
+
+    Delay 2000
+
+    Tap 495, 979
+
+    Delay 1500
+
+    Tap 416, 1015
+
+    Delay 1500
+
+    FindStr 244, 685, 274, 801, "是", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【等待击杀野怪】识别到【是】，点击"
+
+        Tap intX, intY
+
+        Delay 3000
+
+    Else
+
+        TracePrint "【等待击杀野怪】未识别到【是】"
+
+        Delay 2000
+
+    End If
+
+    Dim ocrX, x消失开始
+
+    x消失开始 = TickCount()
+
+    Do
+
+        If (TickCount() - x消失开始) >= 300000 Then
+
+            TracePrint "【等待击杀野怪】【兜底】5分钟内x未消失，强制继续"
+
+            Exit Do
+
+        End If
+
+        ocrX = Ocr(145, 656, 198, 731, "CFCCCB-303030|FFFFFF-303030", 0.9)
+
+        If Trim(CStr(ocrX)) = "" Then
+
+            TracePrint "【等待击杀野怪】x已消失"
+
+            Exit Do
+
+        End If
+
+        TracePrint "【等待击杀野怪】等待x消失中..."
+
+        Delay 2000
+
+    Loop
+
+    Delay 2000
+
+    Tap 33, 817
+
+    Delay 1000
+
+    TracePrint "【等待击杀野怪】自动战斗已开启"
+
+    Call 导航到千抽万钻()
+
+    Dim 当前数量, 是否已达500
+
+    是否已达500 = False
+
+    当前数量 = 读取击杀数()
+
+    If 当前数量 >= 500 Then
+
+        是否已达500 = True
+
+        TracePrint "【等待击杀野怪】已是500/500，直接领取"
+
+    End If
+
+    If 是否已达500 = False Then
+
+        TracePrint "【等待击杀野怪】等待击杀数达到500..."
+
+        Do
+
+            当前数量 = 读取击杀数()
+
+            If 当前数量 >= 500 Then
+
+                TracePrint "【等待击杀野怪】已达到500"
+
+                Exit Do
+
+            End If
+
+            Delay 2000
+
+        Loop
+
+    End If
+
+    FindPic 179, 328, 212, 739, "Attachment:击杀野怪.png", "000000", 0, 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【等待击杀野怪】识别到【击杀野怪】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+    Else
+
+        TracePrint "【等待击杀野怪】未识别到【击杀野怪】"
+
+    End If
+
+    FindPic 142, 443, 337, 848, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【等待击杀野怪】识别到【确认】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+    Else
+
+        TracePrint "【等待击杀野怪】未识别到【确认】"
+
+    End If
+
+    Dim 关闭活动开始
+
+    关闭活动开始 = TickCount()
+
+    Do
+
+        If (TickCount() - 关闭活动开始) >= 2000 Then
+
+            TracePrint "【等待击杀野怪】2秒内未识别到x，直接点击坐标628,1160关闭活动"
+
+            Tap 628, 1160
+
+            Delay 1000
+
+            Exit Do
+
+        End If
+
+        FindStr 610, 1134, 651, 1184, "x", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【等待击杀野怪】识别到【x】，关闭活动"
+
+            Tap intX, intY
+
+            Delay 1000
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    Tap 33, 817
+
+    Delay 1000
+
+    TracePrint "【等待击杀野怪】自动战斗已取消"
+
+    Call 强化流程()
+
+    TracePrint "【获取水晶】阶段五：属性奖励领取"
+
+    TracePrint "【获取水晶】阶段五-1：进入千抽万钻，处理杂货商人"
+    Call 导航到千抽万钻()
+
+    Call 处理欧尼斯降临()
+
+    FindPic 176, 326, 219, 742, "Attachment:杂货商人.png", "000000", 0, 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【获取水晶】识别到【杂货商人】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+    End If
+
+    Call 点击确认图("【获取水晶】杂货商人后识别到【确认】，点击")
+    Call 关闭活动窗口_获取水晶("【获取水晶】阶段五-1")
+
+    TracePrint "【获取水晶】阶段五-2：重新进入千抽万钻，处理属性奖励"
+    Call 导航到千抽万钻()
+
+    Call 处理欧尼斯降临()
+
+    FindPic 176, 326, 219, 742, "Attachment:属性奖励.png", "000000", 0, 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【获取水晶】识别到【属性奖励】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+    End If
+
+    Call 点击确认图("【获取水晶】属性奖励后识别到【确认】，点击")
+    Call 关闭活动窗口_获取水晶("【获取水晶】阶段五-2")
+
+    TracePrint "【获取水晶】阶段五-3：再次回到千抽万钻，点击坐标440,485领取奖励"
+    Call 导航到千抽万钻()
+
+    Call 处理欧尼斯降临()
+
+    TracePrint "【获取水晶】点击坐标440,485领取奖励"
+
+    Tap 440, 485
+
+    Delay 1500
+
+    Call 点击确认图("【获取水晶】领取奖励后识别到【确认】，点击")
+
+    Call 关闭活动窗口_获取水晶("【获取水晶】阶段五-3")
+
+    TracePrint "【获取水晶】阶段六：抽奖流程"
+
+    Call 抽奖流程()
+
+    TracePrint ">>> 获取水晶结束"
+
+End Sub
+
+Sub 强化流程()
+
+    Dim intX, intY
+
+    TracePrint "【强化流程】阶段四：商人购买与强化"
+
+    Tap 644, 101
+
+    Delay 1500
+
+    FindStr 49, 1179, 70, 1225, "返回", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【强化流程】识别到【返回】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+    End If
+
+    FindStr 244, 685, 274, 801, "是", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【强化流程】识别到【是】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+    End If
+
+    Dim 商人开始时间, 已进入商人
+
+    商人开始时间 = TickCount()
+
+    已进入商人 = False
+
+    Do
+
+        FindStr 617, 173, 652, 236, "罗迪落", "FEFAF6-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【强化流程】识别到【罗迪落】，确认已点击商人"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            已进入商人 = True
+
+            Exit Do
+
+        End If
+
+        If (TickCount() - 商人开始时间) < 10000 Then
+
+            FindStr 518, 78, 558, 131, "商人", "FEFAF6-303030|FFFFFF-303030", 0.9, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【强化流程】识别到【商人】，点击"
+
+                Tap intX, intY
+
+                Delay 1500
+
+            Else
+
+                Delay 500
+
+            End If
+
+        Else
+
+            TracePrint "【强化流程】超时未确认商人，兜底点击坐标536,103"
+
+            Tap 536, 103
+
+            Delay 1500
+
+        End If
+
+    Loop
+
+    Dim 找到恢复药水, 商店未识别次数, 屏幕宽, 屏幕高, 商店x1, 商店y1, 商店x2, 商店y2
+
+    找到恢复药水 = False
+
+    商店未识别次数 = 0
+
+    屏幕宽 = GetScreenX()
+
+    屏幕高 = GetScreenY()
+
+    TracePrint "【强化流程】当前屏幕分辨率：" & 屏幕宽 & "x" & 屏幕高
+
+    Do
+
+        If 商店未识别次数 < 5 Then
+
+            商店x1 = 302
+            商店y1 = 469
+            商店x2 = 686
+            商店y2 = 935
+
+        ElseIf 商店未识别次数 < 10 Then
+
+            商店x1 = 202
+            商店y1 = 369
+            商店x2 = 716
+            商店y2 = 1035
+
+        ElseIf 商店未识别次数 < 15 Then
+
+            商店x1 = 102
+            商店y1 = 269
+            商店x2 = 屏幕宽
+            商店y2 = 1135
+
+        Else
+
+            商店x1 = 0
+            商店y1 = 0
+            商店x2 = 屏幕宽
+            商店y2 = 屏幕高
+
+        End If
+
+        If 商店x1 < 0 Then 商店x1 = 0
+        If 商店y1 < 0 Then 商店y1 = 0
+        If 商店x2 > 屏幕宽 Then 商店x2 = 屏幕宽
+        If 商店y2 > 屏幕高 Then 商店y2 = 屏幕高
+
+        TracePrint "【强化流程】识别【商店】区域：" & 商店x1 & "," & 商店y1 & "," & 商店x2 & "," & 商店y2
+
+        FindStr 商店x1, 商店y1, 商店x2, 商店y2, "商店", "F1F8FF-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【强化流程】识别到【商店】，等待6秒后点击"
+
+            Delay 6000
+
+            Tap intX, intY
+
+            Delay 1500
+
+            FindStr 605, 18, 638, 122, "恢复药水", "F1F8FF-303030|FFFFFF-303030", 0.9, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【强化流程】识别到【恢复药水】"
+
+                找到恢复药水 = True
+
+                Exit Do
+
+            Else
+
+                TracePrint "【强化流程】未识别到【恢复药水】，返回重新找商店"
+
+                FindStr 49, 1179, 70, 1225, "返回", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    Tap intX, intY
+
+                    Delay 1500
+
+                End If
+
+            End If
+
+        Else
+
+            商店未识别次数 = 商店未识别次数 + 1
+
+            TracePrint "【强化流程】未识别到【商店】，次数：" & 商店未识别次数
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    Tap 544, 253
+
+    Delay 1500
+
+    FindStr 199, 585, 236, 721, "是", "6FC0FF-303030|64A6DA-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【强化流程】识别到【是】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+    End If
+
+    FindStr 670, 1208, 716, 1274, "x", "BFBFBF-303030", 0.8, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【强化流程】识别到【x】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+    End If
+
+    Dim 强化入口次数, 已点击属性
+
+    强化入口次数 = 0
+
+    已点击属性 = False
+
+    Do
+
+        TracePrint "【强化流程】点击强化入口坐标692,1252"
+
+        Tap 692, 1252
+
+        Delay 1500
+
+        FindStr 326, 948, 358, 1004, "强化", "F1F8FF-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【强化流程】识别到【强化】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        强化入口次数 = 强化入口次数 + 1
+
+        If 强化入口次数 >= 5 Then
+
+            TracePrint "【强化流程】连续5次未识别到【强化】，进入强化兜底：692,1252 + 378,975，直到识别到【属性】"
+
+            Do
+
+                TracePrint "【强化流程】兜底点击强化入口坐标692,1252"
+
+                Tap 692, 1252
+
+                Delay 2500
+
+                TracePrint "【强化流程】兜底点击强化坐标378,975"
+
+                Tap 378, 975
+
+                Delay 2500
+
+                TracePrint "【强化流程】等待强化页面稳定后识别【属性】"
+
+                Delay 1000
+
+                FindStr 370, 599, 421, 676, "属性", "F1F8FF-303030|FFFFFF-303030", 0.9, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【强化流程】兜底后识别到【属性】，点击"
+
+                    Tap intX, intY
+
+                    Delay 1500
+
+                    已点击属性 = True
+
+                    Exit Do
+
+                End If
+
+                TracePrint "【强化流程】兜底后未识别到【属性】，继续兜底"
+
+            Loop
+
+            Exit Do
+
+        End If
+
+    Loop
+
+    If 已点击属性 = False Then
+
+    Do
+
+        FindStr 370, 599, 421, 676, "属性", "F1F8FF-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【强化流程】识别到【属性】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        TracePrint "【强化流程】未识别到【属性】，继续等待识别"
+
+        Delay 500
+
+    Loop
+
+    End If
+
+    Delay 2000
+
+    FindStr 663, 52, 693, 170, "新手", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【强化流程】识别到【新手】，点击"
+
+        Tap intX, intY
+
+        Delay 500
+
+    End If
+
+    Dim 强化数字, 强化完成, ocr赋予属性, 赋予属性出现, 数字值
+
+    强化完成 = False
+
+    Do While 强化完成 = False
+
+        Tap 553, 887
+
+        Delay 1000
+
+        FindStr 28, 23, 78, 180, "自动", "F1F8FF-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【强化流程】识别到【自动】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+        Else
+
+            TracePrint "【强化流程】未识别到【自动】"
+
+        End If
+
+        Delay 2000
+
+        Tap 273, 429
+
+        Delay 1000
+
+        Call 点击max确认("一")
+
+        Tap 132, 424
+
+        Delay 1000
+
+        Call 点击max确认("二")
+
+        FindPic 26, 382, 102, 667, "Attachment:赋予属性.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【强化流程】识别到【赋予属性】按钮，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+        End If
+
+        赋予属性出现 = False
+
+        Do
+
+            FindPic 18, 281, 88, 393, "Attachment:赋予属性.png", "000000", 0, 0.9, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【强化流程】界面已出现【赋予属性】"
+
+                赋予属性出现 = True
+
+                Exit Do
+
+            End If
+
+            TracePrint "【强化流程】等待赋予属性界面出现..."
+
+            Delay 500
+
+        Loop
+
+        If 赋予属性出现 Then
+
+            强化数字 = Ocr(20, 972, 47, 1044, "CFCCCB-303030|FFFFFF-303030", 0.9)
+
+            TracePrint "【强化流程】强化数字OCR: " & 强化数字
+
+            If IsNumeric(Trim(CStr(强化数字))) Then
+
+                数字值 = CInt(Trim(CStr(强化数字)))
+
+                TracePrint "【强化流程】当前数字: " & 数字值
+
+                If 数字值 <= 10 Then
+
+                    TracePrint "【强化流程】数字<=10，结束强化"
+
+                    强化完成 = True
+
+                Else
+
+                    TracePrint "【强化流程】数字>10，继续强化循环"
+
+                End If
+
+            Else
+
+                TracePrint "【强化流程】OCR结果非数字，继续强化循环"
+
+            End If
+
+        End If
+
+        Delay 1000
+
+    Loop
+
+    FindStr 670, 1208, 716, 1274, "x", "BFBFBF-303030", 0.8, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【强化流程】识别到【x】，点击结束"
+
+        Tap intX, intY
+
+        Delay 1000
+
+    End If
+
+    TracePrint "【强化流程】阶段四结束"
+
+End Sub
+
+Sub 循环识别点击(名称, x1, y1, x2, y2, pic, offset, sim, 超时毫秒)
+
+    Dim intX, intY, 开始时间
+
+    开始时间 = TickCount()
+
+    Do
+
+        If (TickCount() - 开始时间) >= 超时毫秒 Then
+
+            TracePrint "【获取水晶】【超时】" & 名称 & " " & (超时毫秒 / 1000) & "秒内未识别到，跳过"
+
+            Exit Do
+
+        End If
+
+        If pic <> "" Then
+
+            FindPic x1, y1, x2, y2, pic, offset, 0, sim, intX, intY
+
+        Else
+
+            FindStr x1, y1, x2, y2, 名称, offset, sim, intX, intY
+
+        End If
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【获取水晶】识别到【" & 名称 & "】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+End Sub
+
+Sub 打开活动()
+
+    Dim intX, intY, 开始时间
+
+    TracePrint "【获取水晶】打开活动"
+
+    开始时间 = TickCount()
+
+    FindStr 645, 877, 672, 925, "活动", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【获取水晶】识别到【活动】，点击"
+
+        Tap intX, intY
+
+        Delay 2000
+
+    Else
+
+        TracePrint "【获取水晶】未识别到【活动】，点击坐标684,907"
+
+        Tap 684, 907
+
+        Delay 2000
+
+    End If
+
+    Do
+
+        If (TickCount() - 开始时间) >= 10000 Then
+
+            TracePrint "【获取水晶】【超时】10秒内未验证活动打开"
+
+            Exit Do
+
+        End If
+
+        FindStr 615, 1148, 643, 1175, "x", "FFFFFF-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【获取水晶】活动界面已打开"
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+End Sub
+
+Sub 点击初夏幽享()
+
+    TracePrint "【获取水晶】点击初夏幽享坐标617,199"
+
+    Tap 617, 199
+
+    Delay 1500
+
+End Sub
+
+Sub 点击福利()
+
+    Call 循环识别点击("福利", 242, 99, 306, 251, "Attachment:福利.png", "000000", 0.9, 10000)
+
+End Sub
+
+Sub 点击战力()
+
+    Call 循环识别点击("战力", 135, 151, 172, 249, "Attachment:战力.png", "000000", 0.9, 10000)
+
+End Sub
+
+Sub 天赋流程()
+
+    Dim intX, intY, 开始时间, 天赋等待开始
+
+    TracePrint "【获取水晶】进入天赋流程"
+
+    开始时间 = TickCount()
+
+    Do
+
+        If (TickCount() - 开始时间) >= 15000 Then
+
+            TracePrint "【获取水晶】【超时】15秒内未打开天赋，跳过"
+
+            Exit Do
+
+        End If
+
+        FindStr 488, 1121, 515, 1168, "天赋", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【获取水晶】识别到【天赋】，点击"
+
+            Tap intX, intY
+
+            Delay 500
+
+            天赋等待开始 = TickCount()
+
+            TracePrint "【获取水晶】点击天赋后3秒窗口期检测【新手】..."
+
+            Do
+
+                If (TickCount() - 天赋等待开始) >= 3000 Then
+
+                    TracePrint "【获取水晶】3秒窗口期结束，未识别到【新手】，继续流程"
+
+                    Exit Do
+
+                End If
+
+                FindStr 663, 52, 693, 170, "新手", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【获取水晶】识别到【新手】，点击"
+
+                    Tap intX, intY
+
+                    Delay 500
+
+                    Exit Do
+
+                End If
+
+                Delay 200
+
+            Loop
+
+            Delay 1000
+
+            Exit Do
+
+        End If
+
+        TracePrint "【获取水晶】未识别到【天赋】，点击菜单692,1252"
+
+        Tap 692, 1252
+
+        Delay 3000
+
+    Loop
+
+    Call 循环识别点击("自动设置", 30, 37, 73, 181, "Attachment:自动设置.png", "000000", 0.9, 10000)
+
+    Call 循环识别点击("使用", 258, 671, 297, 832, "Attachment:使用.png", "000000", 0.9, 10000)
+
+    Call 循环识别点击("x", 670, 1208, 716, 1274, "", "BFBFBF-303030", 0.8, 10000)
+
+End Sub
+
+Sub 背包流程()
+
+    Dim intX, intY, 开始时间
+
+    TracePrint "【获取水晶】进入背包流程"
+
+    开始时间 = TickCount()
+
+    Do
+
+        If (TickCount() - 开始时间) >= 10000 Then
+
+            TracePrint "【获取水晶】【超时】10秒内未打开背包，跳过"
+
+            Exit Do
+
+        End If
+
+        FindStr 647, 1169, 674, 1218, "背包", "CFCCCB-303030|FFFFFF-303030|F5EEF3", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【获取水晶】识别到【背包】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+        Else
+
+            TracePrint "【获取水晶】未识别到【背包】，点击坐标687,1192"
+
+            Tap 687, 1192
+
+            Delay 1500
+
+        End If
+
+        FindStr 601, 1179, 643, 1254, "其他", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【获取水晶】背包已打开"
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    Call 循环识别点击("自动装备", 20, 1161, 79, 1264, "Attachment:自动装备.png", "000000", 0.9, 10000)
+
+    Call 点击确认或关闭()
+
+    Call 循环识别点击("x", 670, 1208, 716, 1274, "", "BFBFBF-303030", 0.8, 10000)
+
+End Sub
+
+Sub 点击确认或关闭()
+
+    Dim intX, intY, 开始时间
+
+    开始时间 = TickCount()
+
+    Do
+
+        If (TickCount() - 开始时间) >= 5000 Then
+
+            TracePrint "【获取水晶】【超时】5秒内未识别到确认/关闭，跳过"
+
+            Exit Do
+
+        End If
+
+        FindPic 142, 443, 337, 848, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【获取水晶】识别到【确认】，点击"
+
+            Tap intX, intY
+
+            Delay 1000
+
+            Exit Do
+
+        End If
+
+        FindStr 113, 562, 143, 600, "关闭", "CFCCCB-303030|FFFFFF-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【获取水晶】识别到【关闭】，点击"
+
+            Tap intX, intY
+
+            Delay 1000
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+End Sub
+
+Sub 检测水晶确认()
+
+    Dim intX, intY
+
+    FindPic 142, 443, 337, 848, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【获取水晶】区域142,443,337,848识别到【确认】，领取成功"
+
+        Tap intX, intY
+
+        Delay 1000
+
+    Else
+
+        FindPic 31, 727, 130, 942, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【获取水晶】区域31,727,130,942识别到【确认】，领取失败"
+
+            Tap intX, intY
+
+            Delay 1000
+
+        Else
+
+            TracePrint "【获取水晶】未识别到任何【确认】，默认领取失败"
+
+        End If
+
+    End If
+
+End Sub
+
+Sub 抽奖流程()
+
+    Dim intX, intY
+
+    Dim 清理计数2, 清理到东西2
+
+    TracePrint "【抽奖流程】开始，当前角色：" & 当前角色序号 & "/" & 最大角色数量
+
+    TracePrint "【抽奖流程】点击坐标689,844进入抽奖页面"
+
+    Tap 689, 844
+
+    Delay 2000
+
+    TracePrint "【抽奖流程】识别√"
+
+    FindPic 98, 1067, 132, 1103, "Attachment:√.png", "000000", 0, 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【抽奖流程】有√，跳过"
+
+    Else
+
+        TracePrint "【抽奖流程】没有√，点击坐标113,1085"
+
+        Tap 113, 1085
+
+        Delay 1000
+
+    End If
+
+    TracePrint "【抽奖流程】开始抽奖10次循环"
+
+    Call 抽奖循环("抽奖10次", 40, 827, 82, 975, "Attachment:抽奖10次.png")
+
+    TracePrint "【抽奖流程】开始抽奖一次循环"
+
+    Call 抽奖循环("抽奖一次", 35, 555, 89, 772, "Attachment:抽奖一次.png")
+
+    TracePrint "【抽奖流程】点击坐标696,1245退出页面"
+
+    Tap 696, 1245
+
+    Delay 3000
+
+    TracePrint "【抽奖流程】3秒窗口期检测新手"
+
+    Dim 新手检测开始
+
+    新手检测开始 = TickCount()
+
+    Do
+
+        If (TickCount() - 新手检测开始) >= 3000 Then
+
+            TracePrint "【抽奖流程】3秒窗口期结束"
+
+            Exit Do
+
+        End If
+
+        FindStr 663, 52, 693, 170, "新手", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【抽奖流程】识别到【新手】，点击"
+
+            Tap intX, intY
+
+            Delay 500
+
+        End If
+
+        Delay 1000
+
+    Loop
+
+    If 当前角色序号 >= 最大角色数量 Then
+
+        TracePrint "【抽奖流程】第" & 当前角色序号 & "个角色已完成全部流程和抽奖，已达到最大角色数量" & 最大角色数量 & "，停止脚本"
+
+        ShowMessage "6个角色已全部跑完", 5000, 0, 0
+
+        EndScript
+
+    End If
+
+    TracePrint "【抽奖流程】切换角色到步骤2"
+
+    Call 切换角色到步骤2()
+
+    当前角色序号 = 当前角色序号 + 1
+
+    步骤3已执行 = 0
+
+    TracePrint "【抽奖流程】已切换到第" & 当前角色序号 & "个角色，重置步骤3执行标志"
+
+    Call 步骤1识别下一个优化版()
+
+    TracePrint "【抽奖流程】步骤1完成，进入步骤2主线"
+
+    Call 步骤2_主线到20级()
+
+    If 强制步骤1 = 1 Then
+
+        TracePrint "【抽奖流程】步骤2因KillApp退出，跳过步骤3，回到主流程"
+
+        Exit Sub
+
+    End If
+
+    TracePrint "【抽奖流程】步骤2完成，进入步骤3每日任务"
+
+    Call 商店购买流程()
+
+    Call 步骤3_每日任务()
+
+    步骤3已执行 = 1
+
+    TracePrint "【抽奖流程】步骤3完成，清理窗口"
+
+    清理计数2 = 0
+
+    Do
+
+        清理到东西2 = 0
+
+        If 清理常见弹窗("抽奖流程-清理") = True Then
+            清理到东西2 = 1
+        End If
+
+        FindStr 661, 28, 693, 60, "x", "FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【抽奖流程-清理】识别到【x】，点击"
+
+            Tap intX, intY
+
+            Delay 1000
+
+            清理到东西2 = 1
+
+        End If
+
+        FindStr 133, 1200, 181, 1249, "X", "BFBFBF-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【抽奖流程-清理】识别到【对话X】，点击"
+
+            Tap intX, intY
+
+            Delay 500
+
+            清理到东西2 = 1
+
+        End If
+
+        FindStr 487, 1042, 539, 1105, "首充", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【抽奖流程-清理】识别到【首充】，点击关闭"
+
+            Tap intX, intY
+
+            Delay 1000
+
+            清理到东西2 = 1
+
+        End If
+
+        Call 检测并点击新手()
+
+        If 清理到东西2 = 0 Then
+
+            清理计数2 = 清理计数2 + 1
+
+            If 清理计数2 >= 2 Then
+
+                TracePrint "【抽奖流程-清理】连续2轮无弹窗，清理完成"
+
+                Exit Do
+
+            End If
+
+        Else
+
+            清理计数2 = 0
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    TracePrint "【抽奖流程】第" & 当前角色序号 & "个角色步骤3完成，开始获取水晶"
+
+    If 脚本模式 = 2 Then
+
+        Call 六角色20级_循环()
+
+    Else
+
+        Call 获取水晶()
+
+    End If
+
+    TracePrint ">>> 抽奖流程结束"
+
+End Sub
+
+Sub 六角色20级_循环()
+
+    Dim intX, intY
+
+    Dim 清理计数2, 清理到东西2
+
+    If 当前角色序号 >= 最大角色数量 Then
+
+        TracePrint "【20级模式】第" & 当前角色序号 & "个角色已完成，已达到最大角色数量" & 最大角色数量 & "，停止脚本"
+
+        ShowMessage "6个角色已全部跑完", 5000, 0, 0
+
+        EndScript
+
+    End If
+
+    TracePrint "【20级模式】切换角色到步骤2"
+
+    Call 切换角色到步骤2()
+
+    当前角色序号 = 当前角色序号 + 1
+
+    步骤3已执行 = 0
+
+    TracePrint "【20级模式】已切换到第" & 当前角色序号 & "个角色，重置步骤3执行标志"
+
+    Call 步骤1识别下一个优化版()
+
+    TracePrint "【20级模式】步骤1完成，进入步骤2主线"
+
+    Call 步骤2_主线到20级()
+
+    If 强制步骤1 = 1 Then
+
+        TracePrint "【20级模式】步骤2因KillApp退出，跳过步骤3，回到主流程"
+
+        Exit Sub
+
+    End If
+
+    TracePrint "【20级模式】步骤2完成，进入步骤3每日任务"
+
+    Call 商店购买流程()
+
+    Call 步骤3_每日任务()
+
+    步骤3已执行 = 1
+
+    TracePrint "【20级模式】步骤3完成，清理窗口"
+
+    清理计数2 = 0
+
+    Do
+
+        清理到东西2 = 0
+
+        If 清理常见弹窗("20级模式-清理") = True Then
+            清理到东西2 = 1
+        End If
+
+        FindStr 661, 28, 693, 60, "x", "FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【20级模式-清理】识别到【x】，点击"
+
+            Tap intX, intY
+
+            Delay 1000
+
+            清理到东西2 = 1
+
+        End If
+
+        FindStr 133, 1200, 181, 1249, "X", "BFBFBF-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【20级模式-清理】识别到【对话X】，点击"
+
+            Tap intX, intY
+
+            Delay 500
+
+            清理到东西2 = 1
+
+        End If
+
+        FindStr 487, 1042, 539, 1105, "首充", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【20级模式-清理】识别到【首充】，点击关闭"
+
+            Tap intX, intY
+
+            Delay 1000
+
+            清理到东西2 = 1
+
+        End If
+
+        Call 检测并点击新手()
+
+        If 清理到东西2 = 0 Then
+
+            清理计数2 = 清理计数2 + 1
+
+            If 清理计数2 >= 2 Then
+
+                TracePrint "【20级模式-清理】连续2轮无弹窗，清理完成"
+
+                Exit Do
+
+            End If
+
+        Else
+
+            清理计数2 = 0
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    TracePrint "【20级模式】第" & 当前角色序号 & "个角色步骤3完成，切换下一个角色"
+
+    Call 六角色20级_循环()
+
+End Sub
+
+Sub 处理抽奖确认()
+
+    Dim intX, intY
+
+    Dim 大确认找到
+
+    大确认找到 = False
+
+    Do While 大确认找到 = False
+
+        FindStr 235, 468, 279, 589, "否", "FFFFFF-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【处理确认】识别到【否】，无确认弹窗，退出处理"
+
+            Exit Do
+
+        End If
+
+        FindPic 139, 550, 183, 730, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【处理确认】识别到大区域确认(139,550,183,730)，点击"
+
+            Tap intX, intY
+
+            Delay 1000
+
+            大确认找到 = True
+
+            Exit Do
+
+        End If
+
+        FindPic 32, 551, 72, 730, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【处理确认】识别到小区域确认(32,551,72,730)，点击"
+
+            Tap intX, intY
+
+            Delay 1000
+
+        End If
+
+        Delay 1000
+
+    Loop
+
+End Sub
+
+Sub 关闭活动窗口_获取水晶(来源)
+
+    Dim intX, intY, 关闭x开始
+
+    关闭x开始 = TickCount()
+
+    Do
+
+        If (TickCount() - 关闭x开始) >= 2000 Then
+
+            TracePrint 来源 & " 2秒未识别到x，兜底点击628,1160"
+
+            Tap 628, 1160
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        FindStr 610, 1134, 651, 1184, "x", "CFCCCB-303030|FFFFFF-303030", 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint 来源 & " 识别到【x】，关闭活动"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+End Sub
+
+Sub 点击确认图(日志)
+
+    Dim intX, intY
+
+    FindPic 142, 443, 337, 848, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint 日志
+
+        Tap intX, intY
+
+        Delay 1500
+
+    End If
+
+End Sub
+
+Sub 导航到千抽万钻()
+
+    Call 打开活动()
+    Delay 1500
+
+    Call 点击初夏幽享()
+
+    Call 循环识别点击("千抽万钻", 315, 92, 399, 311, "Attachment:千抽万钻.png", "000000", 0.9, 10000)
+
+End Sub
+
+Sub 处理欧尼斯降临()
+
+    Dim intX, intY, 尝试次数
+
+    TracePrint "【欧尼斯降临】开始检测欧尼斯降临弹窗"
+
+    ' 尝试识别欧尼斯降临1.png，最多2次
+    尝试次数 = 0
+
+    Do
+
+        FindPic 67, 91, 567, 316, "Attachment:欧尼斯降临1.png", "000000", 0, 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【欧尼斯降临】识别到【欧尼斯降临1】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Sub
+
+        End If
+
+        尝试次数 = 尝试次数 + 1
+
+        If 尝试次数 >= 2 Then Exit Do
+
+        Delay 500
+
+    Loop
+
+    ' 2次未识别到，兜底：欧尼斯降临.png
+    FindPic 67, 91, 567, 316, "Attachment:欧尼斯降临.png", "000000", 0, 0.8, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【欧尼斯降临】兜底识别到【欧尼斯降临】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+        Exit Sub
+
+    End If
+
+    ' 兜底：FindStr "尼"（字库3）
+    UseDict 3
+
+    FindStr 66, 91, 489, 301, "尼", "738899-303030|5A6975-303030", 0.8, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【欧尼斯降临】兜底识别到【尼】，点击"
+
+        Tap intX, intY
+
+        Delay 1500
+
+    Else
+
+        TracePrint "【欧尼斯降临】未检测到欧尼斯降临弹窗"
+
+    End If
+
+End Sub
+
+Sub 抽奖循环(名称, x1, y1, x2, y2, 图片)
+
+    Dim intX, intY, 找到否
+
+    找到否 = False
+
+    Do While 找到否 = False
+
+        FindPic x1, y1, x2, y2, 图片, "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【抽奖流程】识别到【" & 名称 & "】，点击"
+
+            Tap intX, intY
+
+            Delay 1000
+
+        Else
+
+            TracePrint "【抽奖流程】未识别到【" & 名称 & "】"
+
+        End If
+
+        Call 处理抽奖确认()
+
+        FindStr 235, 468, 279, 589, "否", "FFFFFF-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【抽奖流程】识别到【否】，点击"
+
+            Tap intX, intY
+
+            Delay 1000
+
+            找到否 = True
+
+            Exit Do
+
+        End If
+
+    Loop
+
+End Sub
+
+Function 读取击杀数()
+
+    Dim ocr数字, 数字部分, 数字字符串
+
+    ocr数字 = CStr(Ocr(144, 330, 184, 434, "CFCCCB-303030|FFFFFF-303030", 0.9))
+
+    TracePrint "【等待击杀野怪】千抽万钻OCR: " & ocr数字
+
+    读取击杀数 = -1
+
+    数字部分 = Split(ocr数字, "/")
+
+    If UBound(数字部分) >= 0 Then
+
+        数字字符串 = Trim(数字部分(0))
+
+        If IsNumeric(数字字符串) Then
+
+            读取击杀数 = CInt(数字字符串)
+
+            TracePrint "【等待击杀野怪】当前击杀数: " & CInt(数字字符串) & "/500"
+
+        End If
+
+    End If
+
+End Function
+
+Sub 点击max确认(序号)
+
+    Dim intX, intY
+
+    FindStr 240, 699, 275, 777, "max", "F1F8FF-303030|FFFFFF-303030", 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【强化流程】识别到【max】（第" & 序号 & "次），点击"
+
+        Tap intX, intY
+
+        Delay 1000
+
+    End If
+
+    FindPic 140, 640, 208, 826, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+    If intX > -1 And intY > -1 Then
+
+        TracePrint "【强化流程】识别到【确认】（第" & 序号 & "次），点击"
+
+        Tap intX, intY
+
+        Delay 1000
+
+    End If
+
+End Sub
+
+Sub 步骤1识别下一个优化版()
+
+    UseDict 0
+
+    Dim 相似度, intX, intY, i
+
+    Dim 已选红方, 已点确认下一个, 已点创建角色, 已处理输入, 已点开始游戏
+
+    Dim 已点跳过序章, 已点弓箭, 已点确认
+
+    Dim 序章扫描开始时间, 扫描开始时间
+
+    相似度 = 0.9
+
+    已选红方 = 0
+
+    已点确认下一个 = 0
+
+    已点创建角色 = 0
+
+    已处理输入 = 0
+
+    已点开始游戏 = 0
+
+    已点跳过序章 = 0
+
+    已点弓箭 = 0
+
+    已点确认 = 0
+
+    序章扫描开始时间 = 0
+
+    扫描开始时间 = TickCount()
+
+    TracePrint "【步骤1-识别下一个】开始（优化版）"
+
+    Do
+
+        If 已点开始游戏 = 0 Then
+            FindPic 211, 648, 302, 880, "Attachment:是.png", "000000", 0, 0.9, intX, intY
+            If intX > -1 And intY > -1 Then
+                TracePrint "【步骤1-识别下一个】当前已在名字确认页面，直接进入输入名字流程"
+                已选红方 = 1
+                已点确认下一个 = 1
+                已点创建角色 = 1
+            End If
+        End If
+
+        If 已点确认下一个 = 0 Then
+            FindPic 12, 1039, 83, 1262, "Attachment:下一个.png", "000000", 0, 0.9, intX, intY
+            If intX > -1 And intY > -1 Then
+                TracePrint "【步骤1-识别下一个】当前已在确认下一个页面，直接进入确认下一个流程"
+                已选红方 = 1
+            End If
+        End If
+
+        If 已点创建角色 = 0 Then
+            FindStr 33, 1080, 66, 1234, "创建角色", "6FC0FF-303030|6FC0FF-303030", 相似度, intX, intY
+            If intX > -1 And intY > -1 Then
+                TracePrint "【步骤1-识别下一个】当前已在创建角色页面，直接进入创建角色流程"
+                已选红方 = 1
+                已点确认下一个 = 1
+            End If
+        End If
+
+        If 已点开始游戏 = 0 Then
+            FindStr 7, 1023, 141, 1269, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+            If intX > -1 And intY > -1 Then
+                TracePrint "【步骤1-识别下一个】当前已在开始游戏页面，直接进入开始游戏流程"
+                已选红方 = 1
+                已点确认下一个 = 1
+                已点创建角色 = 1
+                已处理输入 = 1
+            End If
+        End If
+
+        If 已选红方 = 0 Then
+
+            FindStr 14, 1110, 97, 1267, "下一个", "FDFDFD-303030|FAFBFB-303030|FFFFFF-303030", 相似度, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【步骤1-识别下一个】选阵营点红方→下一个"
+
+                Tap 522, 460
+
+                Delay 500
+
+                Tap intX, intY
+
+                Delay 1500
+
+                FindPic 236, 479, 276, 557, "Attachment:否.png", "000000", 0, 0.9, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【步骤1-识别下一个】检测到否弹窗，点击否"
+
+                    Tap intX, intY
+
+                    Delay 1000
+
+                End If
+
+                已选红方 = 1
+
+            End If
+
+        End If
+
+        If 已选红方 = 1 And 已点确认下一个 = 0 Then
+
+            FindPic 12, 1039, 83, 1262, "Attachment:下一个.png", "000000", 0, 0.9, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【步骤1-识别下一个】确认界面识别到【下一个】图片，点击"
+
+                Tap intX, intY
+
+                Delay 1500
+
+                已点确认下一个 = 1
+
+            End If
+
+        End If
+
+        If 已点确认下一个 = 1 And 已点创建角色 = 0 Then
+
+            FindStr 33, 1080, 66, 1234, "创建角色", "6FC0FF-303030|6FC0FF-303030", 相似度, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【步骤1-识别下一个】点击创建角色"
+
+                Tap intX, intY
+
+                Delay 2000
+
+                已点创建角色 = 1
+
+            End If
+
+        End If
+
+        If 已点创建角色 = 1 And 已处理输入 = 0 Then
+
+            FindPic 211, 648, 302, 880, "Attachment:是.png", "000000", 0, 0.9, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【步骤1-识别下一个】输入名字"
+
+                Tap 356, 621
+
+                Delay 2000
+
+                For i = 1 To 3
+
+                    KeyPress "Del"
+
+                    Delay 100
+
+                Next
+
+                Delay 300
+
+                Call 输入英文或数字()
+
+                KeyPress "Back"
+
+                Delay 500
+
+                Tap intX, intY
+
+                Delay 1500
+
+                Tap intX, intY
+
+                Delay 2000
+
+                已处理输入 = 1
+
+            End If
+
+        End If
+
+        If 已处理输入 = 1 And 已点开始游戏 = 0 Then
+
+            FindStr 7, 1023, 141, 1269, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【步骤1-识别下一个】点击开始游戏"
+
+                Tap intX, intY
+
+                Delay 2000
+
+                FindStr 7, 1023, 141, 1269, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    Tap intX, intY
+
+                    Delay 2000
+
+                    FindStr 7, 1023, 141, 1269, "开始游戏", "6FC0FF-303030|66A9DD-303030|67AFE6-303030", 相似度, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【步骤1-识别下一个】二次重试无效"
+
+                    Else
+
+                        已点开始游戏 = 1
+
+                    End If
+
+                Else
+
+                    已点开始游戏 = 1
+
+                End If
+
+            End If
+
+            FindStr 7, 1023, 141, 1269, "创建角色", "6FC0FF-303030|6FC0FF-303030", 相似度, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【步骤1-识别下一个】名字重复重新来过"
+
+                Tap intX, intY
+
+                Delay 2000
+
+                已处理输入 = 0
+
+            End If
+
+        End If
+
+        If 已点开始游戏 = 1 Then
+
+            If 已点跳过序章 = 0 Then
+
+                If 序章扫描开始时间 = 0 Then
+
+                    序章扫描开始时间 = TickCount()
+
+                    TracePrint "【步骤1-识别下一个】检测跳过序章"
+
+                End If
+
+                FindStr 239, 446, 273, 599, "跳过序章", "FFFFFF-303030|E3E3E2-303030|F2F1F1-303030", 相似度, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【步骤1-识别下一个】点击跳过序章"
+
+                    Tap intX, intY
+
+                    Delay 1500
+
+                    已点跳过序章 = 1
+
+                Else
+
+                    If (TickCount() - 序章扫描开始时间) >= 3000 Then
+
+                        TracePrint "【步骤1-识别下一个】3秒未识别跳过序章，判断为老角色"
+
+                        Exit Do
+
+                    End If
+
+                End If
+
+            End If
+
+            If 已点跳过序章 = 1 And 已点弓箭 = 0 Then
+
+                FindStr 297, 758, 340, 830, "弓箭", "FFFFFF-303030|BFBFBF-303030|F2F1F1-303030", 相似度, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【步骤1-识别下一个】点击弓箭"
+
+                    Tap intX, intY
+
+                    Delay 800
+
+                    已点弓箭 = 1
+
+                End If
+
+            End If
+
+            If 已点弓箭 = 1 And 已点确认 = 0 Then
+
+                FindStr 223, 696, 258, 776, "确认", "6FC0FF-303030|6FC0FF-303030|68B1EA-303030", 相似度, intX, intY
+
+                If intX > -1 And intY > -1 Then
+
+                    TracePrint "【步骤1-识别下一个】点击确认"
+
+                    Tap intX, intY
+
+                    Delay 2000
+
+                    已点确认 = 1
+
+                End If
+
+            End If
+
+            If 已点确认 = 1 Then
+
+                Dim 教学扫描开始
+
+                教学扫描开始 = TickCount()
+
+                Do
+
+                    FindStr 662, 29, 690, 170, "新手教学结束", "FFFFFF-303030|C4C0BD-303030|D9D6D4-303030", 相似度, intX, intY
+
+                    If intX > -1 And intY > -1 Then
+
+                        TracePrint "【步骤1-识别下一个】点击新手教学结束"
+
+                        Tap intX, intY
+
+                        Exit Do
+
+                    End If
+
+                    If (TickCount() - 教学扫描开始) >= 5000 Then
+
+                        TracePrint "【步骤1-识别下一个】5秒未识别新手教学结束"
+
+                        Exit Do
+
+                    End If
+
+                    Delay 300
+
+                Loop
+
+                TracePrint "【步骤1-识别下一个】步骤1完成，准备进入步骤2"
+
+                Exit Do
+
+            End If
+
+        End If
+
+        If (TickCount() - 扫描开始时间) >= 120000 Then
+
+            TracePrint "【步骤1-识别下一个】超时120秒强制结束"
+
+            Exit Do
+
+        End If
+
+        Delay 300
+
+    Loop
+
+End Sub
+
+Sub 输入价格数字(价格字符串)
+
+    Dim j, 字符, 坐标X, 坐标Y
+
+    For j = 1 To Len(价格字符串)
+
+        字符 = Mid(价格字符串, j, 1)
+
+        Select Case 字符
+
+            Case "0"
+
+                坐标X = 252
+                坐标Y = 573
+
+            Case "1"
+
+                坐标X = 436
+                坐标Y = 515
+
+            Case "2"
+
+                坐标X = 441
+                坐标Y = 576
+
+            Case "3"
+
+                坐标X = 442
+                坐标Y = 636
+
+            Case "4"
+
+                坐标X = 372
+                坐标Y = 519
+
+            Case "5"
+
+                坐标X = 381
+                坐标Y = 582
+
+            Case "6"
+
+                坐标X = 377
+                坐标Y = 640
+
+            Case "7"
+
+                坐标X = 312
+                坐标Y = 529
+
+            Case "8"
+
+                坐标X = 318
+                坐标Y = 576
+
+            Case "9"
+
+                坐标X = 318
+                坐标Y = 636
+
+        End Select
+
+        TracePrint "【交易行出售水晶】输入数字：" & 字符 & " 坐标：" & 坐标X & "," & 坐标Y
+
+        Tap 坐标X, 坐标Y
+
+        Delay 500
+
+    Next
+
+End Sub
+
+Sub 交易行出售水晶()
+
+    Dim intX, intY, i
+    Dim 价格字符串
+    Dim 交易行重试, 出售未识别次数, 水晶未识别次数
+
+    ' 从UI界面读取价格输入
+    价格字符串 = ReadUIConfig("价格输入")
+
+    TracePrint "【交易行出售水晶】开始"
+
+    交易行重试 = True
+
+    Do While 交易行重试 = True
+
+        交易行重试 = False
+
+        ' === 第1步：打开菜单，进入交易行 ===
+
+        TracePrint "【交易行出售水晶】第1步：点击692,1252打开菜单"
+
+        Tap 692, 1252
+
+        Delay 1500
+
+        FindPic 632, 773, 667, 839, "Attachment:交易行.png", "000000", 0, 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【交易行出售水晶】识别到【交易行】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+        Else
+
+            TracePrint "【交易行出售水晶】未识别到【交易行】，兜底点击660,800"
+
+            Tap 660, 800
+
+            Delay 1500
+
+        End If
+
+        ' === 第2步：识别出售，确认进入交易行 ===
+
+        出售未识别次数 = 0
+
+        Do
+
+            FindPic 621, 250, 651, 299, "Attachment:出售.png", "000000", 0, 0.8, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【交易行出售水晶】识别到【出售】，点击"
+
+                Tap intX, intY
+
+                Delay 1500
+
+                Exit Do
+
+            End If
+
+            出售未识别次数 = 出售未识别次数 + 1
+
+            TracePrint "【交易行出售水晶】未识别到【出售】，次数：" & 出售未识别次数
+
+            If 出售未识别次数 >= 10 Then
+
+                TracePrint "【交易行出售水晶】10次未识别到【出售】，返回第1步重新打开交易行"
+
+                交易行重试 = True
+
+                Exit Do
+
+            End If
+
+            Delay 500
+
+        Loop
+
+    Loop
+
+    ' === 第3步：识别道具出售，确认点击出售成功（必须识别，无限重试） ===
+
+    i = 0
+
+    Do
+
+        FindPic 11, 1078, 78, 1276, "Attachment:道具出售.png", "000000", 0, 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【交易行出售水晶】识别到【道具出售】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        i = i + 1
+
+        TracePrint "【交易行出售水晶】未识别到【道具出售】，重试次数：" & i
+
+        Delay 500
+
+    Loop
+
+    ' === 第4步：识别点击其他，然后点击579,1010（必须识别，无限重试） ===
+
+    i = 0
+
+    Do
+
+        FindPic 615, 1169, 652, 1251, "Attachment:其他.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【交易行出售水晶】识别到【其他】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        i = i + 1
+
+        TracePrint "【交易行出售水晶】未识别到【其他】，重试次数：" & i
+
+        Delay 500
+
+    Loop
+
+    TracePrint "【交易行出售水晶】点击坐标579,1010"
+
+    Tap 579, 1010
+
+    Delay 1500
+
+    ' === 第5步：识别点击可交易水晶 ===
+
+    水晶未识别次数 = 0
+
+    Do
+
+        FindPic 402, 853, 540, 1259, "Attachment:可交易水晶.png", "000000", 0, 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【交易行出售水晶】识别到【可交易水晶】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        水晶未识别次数 = 水晶未识别次数 + 1
+
+        If 水晶未识别次数 >= 3 Then
+
+            TracePrint "【交易行出售水晶】3次未识别到【可交易水晶】，尝试识别【可交易水晶1】"
+
+            FindPic 402, 855, 540, 1254, "Attachment:可交易水晶1.png", "000000", 0, 0.7, intX, intY
+
+            If intX > -1 And intY > -1 Then
+
+                TracePrint "【交易行出售水晶】识别到【可交易水晶1】，点击"
+
+                Tap intX, intY
+
+                Delay 1500
+
+                Exit Do
+
+            End If
+
+        End If
+
+        If 水晶未识别次数 >= 10 Then
+
+            TracePrint "【交易行出售水晶】10次未识别到可交易水晶，跳过"
+
+            Exit Sub
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    ' === 第6步：输入价格，确认，点击max，确认 ===
+
+    TracePrint "【交易行出售水晶】点击坐标281,418输入价格"
+
+    Tap 281, 418
+
+    Delay 1500
+
+    TracePrint "【交易行出售水晶】输入价格：" & 价格字符串
+
+    Call 输入价格数字(价格字符串)
+
+    Delay 1000
+
+    ' 识别点击确认（区域155,660,193,808）
+
+    i = 0
+
+    Do
+
+        FindPic 155, 660, 193, 808, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【交易行出售水晶】识别到【确认】（价格），点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        i = i + 1
+
+        If i >= 10 Then
+
+            TracePrint "【交易行出售水晶】10次未识别到价格【确认】，跳过"
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    ' 点击坐标247,424
+
+    TracePrint "【交易行出售水晶】点击坐标247,424"
+
+    Tap 247, 424
+
+    Delay 1500
+
+    ' 必须识别点击max（区域232,694,282,788），不跳过，循环到识别到为止
+
+    i = 0
+
+    Do
+
+        FindPic 232, 694, 282, 788, "Attachment:MAX.png", "000000", 0, 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【交易行出售水晶】识别到【max】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        i = i + 1
+
+        TracePrint "【交易行出售水晶】未识别到【max】，重试次数：" & i
+
+        Delay 1000
+
+    Loop
+
+    ' 识别点击确认（区域155,660,193,808）
+
+    i = 0
+
+    Do
+
+        FindPic 155, 660, 193, 808, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【交易行出售水晶】识别到【确认】（max），点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        i = i + 1
+
+        If i >= 10 Then
+
+            TracePrint "【交易行出售水晶】10次未识别到max后【确认】，跳过"
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    ' === 第7步：最终确认，点击是，退出交易行 ===
+
+    ' 区域91,359,128,500识别点击确认
+
+    i = 0
+
+    Do
+
+        FindPic 91, 359, 128, 500, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【交易行出售水晶】识别到最终【确认】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        i = i + 1
+
+        If i >= 10 Then
+
+            TracePrint "【交易行出售水晶】10次未识别到最终【确认】，跳过"
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    ' 区域241,679,277,829识别点击是
+
+    i = 0
+
+    Do
+
+        FindPic 241, 679, 277, 829, "Attachment:是.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【交易行出售水晶】识别到【是】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        i = i + 1
+
+        If i >= 10 Then
+
+            TracePrint "【交易行出售水晶】10次未识别到【是】，跳过"
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    ' 点击692,1252退出交易行
+
+    TracePrint "【交易行出售水晶】点击坐标692,1252退出交易行"
+
+    Tap 692, 1252
+
+    Delay 1500
+
+    TracePrint "【交易行出售水晶】完成"
+
+End Sub
+
+Sub 新增子程序()
+
+    TracePrint "【新增】执行前置检查"
+
+    Tap 500, 800
+
+    Delay 1000
+
+End Sub
+
+Sub 商店购买流程()
+
+    Dim intX, intY, i
+
+    TracePrint "【商店购买】开始"
+
+    ' 点击坐标693,1129
+
+    TracePrint "【商店购买】点击坐标693,1129"
+
+    Tap 693, 1129
+
+    Delay 1500
+
+    ' 识别免费礼包（区域419,684,456,820）
+
+    i = 0
+
+    Do
+
+        FindPic 419, 684, 456, 820, "Attachment:免费礼包.png", "000000", 0, 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【商店购买】识别到【免费礼包】，等待1.5秒后点击"
+
+            Delay 1500
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        i = i + 1
+
+        If i >= 10 Then
+
+            TracePrint "【商店购买】10次未识别到【免费礼包】，跳过"
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    ' 识别点击确认（区域124,686,159,797）
+
+    i = 0
+
+    Do
+
+        FindPic 124, 686, 159, 797, "Attachment:确认.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【商店购买】识别到【确认】，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        i = i + 1
+
+        If i >= 10 Then
+
+            TracePrint "【商店购买】10次未识别到【确认】，跳过"
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    ' 点击坐标213,635
+
+    TracePrint "【商店购买】点击坐标213,635"
+
+    Tap 213, 635
+
+    Delay 1500
+
+    ' 点击坐标692,1252退出页面
+
+    TracePrint "【商店购买】点击坐标692,1252退出页面"
+
+    Tap 692, 1252
+
+    Delay 1500
+
+    TracePrint "【商店购买】完成"
+
+End Sub
+
+Sub 切换角色到步骤2()
+
+    Dim intX, intY, i
+
+    UseDict 3
+
+    If 脚本模式 = 0 Then
+
+        Call 交易行出售水晶()
+
+    End If
+
+    Call 新增子程序()
+
+    TracePrint "【切换角色】第7步：打开菜单"
+
+    Tap 692, 1252
+
+    Delay 1500
+
+    TracePrint "【切换角色】第8步：点击设置"
+
+    Do
+
+        FindStr 166, 1213, 201, 1257, "设置", "FFFFFF-303030|B6B5B3-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【切换角色】识别到设置，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    TracePrint "【切换角色】第9步：点击账号"
+
+    Do
+
+        FindStr 676, 623, 711, 696, "账号", "CFCCCB-303030|FFFFFF-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【切换角色】识别到账号，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    TracePrint "【切换角色】第10步：点击变更角色"
+
+    Do
+
+        FindStr 578, 503, 611, 602, "变更角色", "FFFFFF-303030|B6B5B3-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【切换角色】识别到变更角色，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    TracePrint "【切换角色】第11步：点击是"
+
+    Do
+
+        FindStr 242, 720, 275, 798, "是", "6FC0FF-303030|64A6DA-303030", 0.8, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【切换角色】识别到是，点击"
+
+            Tap intX, intY
+
+            Delay 1500
+
+            Exit Do
+
+        End If
+
+        Delay 500
+
+    Loop
+
+    TracePrint "【切换角色】第12步：等待3秒"
+
+    Delay 3000
+
+    TracePrint "【切换角色】第13步：查找+按钮（Touch滑动优化版）"
+
+    Dim 找到加号, 滑动次数
+
+    找到加号 = False
+
+    滑动次数 = 0
+
+    Do While 找到加号 = False
+
+        FindPic 76, 1084, 561, 1246, "Attachment:+.png", "000000", 0, 0.9, intX, intY
+
+        If intX > -1 And intY > -1 Then
+
+            TracePrint "【切换角色】识别到+，等待2秒后点击"
+
+            Delay 2000
+
+            Tap intX, intY
+
+            Delay 2000
+
+            找到加号 = True
+
+        Else
+
+            滑动次数 = 滑动次数 + 1
+
+            TracePrint "【切换角色】未识别到+，第" & 滑动次数 & "次执行Touch滑动"
+
+            TouchDown 116, 1157, 1
+
+            Delay 100
+
+            TouchDown 526, 1173, 2
+
+            Delay 100
+
+            TouchMove 526, 1173, 1, 500
+
+            Delay 100
+
+            TouchMove 116, 1157, 2, 500
+
+            Delay 100
+
+            TouchUp 1
+
+            Delay 100
+
+            TouchUp 2
+
+            Delay 2000
+
+            If 滑动次数 >= 5 Then
+
+                TracePrint "【切换角色】滑动5次未找到+，兜底点击坐标 74,118"
+
+                Tap 74, 118
+
+                Delay 2000
+
+                找到加号 = True
+
+            End If
+
+        End If
+
+    Loop
+
+    TracePrint "【切换角色】完成，+按钮已点击"
+
+    步骤3已执行 = 0
+
+    步骤2重启后待补步骤3 = 0
+
+    TracePrint "【切换角色】新角色初始化：步骤3执行标志已重置"
+
+End Sub
