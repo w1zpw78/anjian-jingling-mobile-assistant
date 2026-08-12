@@ -1,0 +1,409 @@
+' =============================================
+' 换账号流程 - 六角色完成切换账号
+' 版本：1.0  日期：2026-08-12
+' =============================================
+' 依赖：
+'   1. 紫猫插件 zm.luae
+'   2. 字库文件：字库.txt(字库0)、字库3.txt(字库3)
+'   3. 图片附件：退出.png、登出.png、密码登录.png、是.png
+'   4. 账号文件：/sdcard/账号.txt（每行一个纯数字账号）
+'   5. 索引文件：/sdcard/账号索引.txt（记录当前账号索引）
+'   6. 设备需要 ROOT 权限（用于卸载其他输入法）
+' =============================================
+
+Import "zm.luae"
+zm.Init
+
+' =============================================
+' 配置区（可按需修改）
+' =============================================
+Dim 账号文件路径, 索引文件路径
+账号文件路径 = "/sdcard/账号.txt"
+索引文件路径 = "/sdcard/账号索引.txt"
+
+Dim 默认密码
+默认密码 = "123456"
+
+Dim 识别超时次数
+识别超时次数 = 60    '识别循环最大重试次数（每次间隔500ms，约30秒）
+
+Dim 按键输入法包名
+按键输入法包名 = "com.cyjh.mobileanjian"    '按键精灵输入法包名（VIP版会自动匹配）
+
+' =============================================
+' 全局变量
+' =============================================
+Dim 当前账号索引
+Dim 设备的输入法
+Dim 当前角色序号
+Dim 已卸载输入法列表    '保存卸载的输入法包名，用于恢复（|分隔）
+已卸载输入法列表 = ""
+当前角色序号 = 1
+
+' === 字库加载 ===
+SetDictEx 0, "Attachment:字库.txt"
+SetDictEx 3, "Attachment:字库3.txt"
+
+' === 主入口 ===
+Call 换账号流程()
+
+' =============================================
+' 模块一：输入法控制（root 卸载/恢复方案）
+' =============================================
+
+' 获取当前默认输入法
+Function getNowIme()
+    getNowIme = zm.Execute("settings get secure default_input_method")
+End Function
+
+' 设置按键输入法为默认，并卸载所有其他输入法
+' 参数 packageName：按键输入法包名，为空时用默认值
+Function setImeEx(packageName)
+    Dim packageNameIme, allIme, imeArr, k, imeId, pkgName, slashPos, ret, curIme
+    If packageName = "" Then
+        packageName = 按键输入法包名
+    End If
+    ' 1) 获取按键输入法ID
+    packageNameIme = zm.Execute("ime list -s -a |grep " & packageName & "|head -n 1")
+    If packageNameIme = "" Then
+        ShowMessage "获取按键输入法失败"
+        TracePrint "【换账号】获取按键输入法失败，包名：" & packageName
+        Exit Function
+    End If
+    ' 2) 获取所有输入法列表
+    allIme = zm.Execute("ime list -s -a")
+    ' 3) 卸载所有非按键输入法（pm uninstall --user 0，不删APK可恢复）
+    已卸载输入法列表 = ""
+    imeArr = Split(allIme, Chr(10))
+    For k = 0 To UBound(imeArr)
+        imeId = Trim(imeArr(k))
+        If imeId <> "" And InStr(1, imeId, packageName) = 0 Then
+            ' 从输入法ID提取包名（com.xxx/.InputMethod → com.xxx）
+            slashPos = InStr(1, imeId, "/")
+            If slashPos > 0 Then
+                pkgName = Left(imeId, slashPos - 1)
+            Else
+                pkgName = imeId
+            End If
+            ' 卸载（为当前用户）
+            ret = zm.Execute("su -c ""pm uninstall --user 0 " & pkgName & """")
+            zm.Execute("su -c ""am force-stop " & pkgName & """")
+            TracePrint "【换账号】已卸载输入法：" & pkgName
+            ' 保存到列表，用于恢复
+            If 已卸载输入法列表 = "" Then
+                已卸载输入法列表 = pkgName
+            Else
+                已卸载输入法列表 = 已卸载输入法列表 & "|" & pkgName
+            End If
+        End If
+    Next
+    ' 4) 设置按键输入法为默认（双保险：settings put + content insert）
+    zm.Execute("su -c ""settings put secure default_input_method " & packageNameIme & """")
+    zm.Execute("su -c ""content insert --uri content://settings/secure --bind name:s:default_input_method --bind value:s:" & packageNameIme & """")
+    Delay 800
+    ' 5) 验证
+    curIme = zm.Execute("settings get secure default_input_method")
+    If InStr(1, curIme, packageName) > 0 Then
+        TracePrint "【换账号】按键输入法启用成功：" & curIme
+    Else
+        TracePrint "【换账号】警告：默认输入法切换失败，当前=" & curIme
+    End If
+End Function
+
+' 恢复原始输入法并重新安装已卸载的输入法
+Function restoreAllIme(typewriting)
+    Dim uninstalledArr, k, pkgName, ret, curIme
+    ' 1) 恢复默认输入法（双保险）
+    zm.Execute("su -c ""settings put secure default_input_method " & typewriting & """")
+    zm.Execute("su -c ""content insert --uri content://settings/secure --bind name:s:default_input_method --bind value:s:" & typewriting & """")
+    ' 2) 重新安装所有卸载的输入法
+    If 已卸载输入法列表 <> "" Then
+        uninstalledArr = Split(已卸载输入法列表, "|")
+        For k = 0 To UBound(uninstalledArr)
+            pkgName = Trim(uninstalledArr(k))
+            If pkgName <> "" Then
+                ret = zm.Execute("su -c ""pm install-existing " & pkgName & """")
+                TracePrint "【换账号】已恢复输入法：" & pkgName
+            End If
+        Next
+    End If
+    Delay 500
+    curIme = zm.Execute("settings get secure default_input_method")
+    TracePrint "【换账号】输入法已恢复：" & curIme
+End Function
+
+' =============================================
+' 模块二：按键模拟输入（绕过输入法）
+' 来自 CSDN 博客方案：通过模拟键盘按键输入，不依赖输入法
+' 注意：不能输入中文（账号密码均为数字，可放心使用）
+' =============================================
+Function KeyPress_Input(s)
+    Dim i, ch
+    If s = "" Then
+        TracePrint "【换账号】KeyPress_Input：输入内容为空"
+        Exit Function
+    End If
+    For i = 1 To Len(s)
+        ch = Mid(s, i, 1)
+        If ch = " " Then
+            KeyPress "Space"
+        Else
+            KeyPress ch
+        End If
+        Delay 20
+    Next
+End Function
+
+' =============================================
+' 模块三：通用识别点击函数（带超时保护）
+' =============================================
+
+' 识别图片并点击（带超时）
+' 参数：x1,y1,x2,y2 图片区域；picPath 图片路径；sim 相似度
+' 返回：True 成功，False 超时
+Function FindPicClick(x1, y1, x2, y2, picPath, sim)
+    Dim intX, intY, i
+    i = 0
+    Do
+        FindPic x1, y1, x2, y2, picPath, "000000", 0, sim, intX, intY
+        If intX > -1 And intY > -1 Then
+            Tap intX, intY
+            Delay 1500
+            FindPicClick = True
+            Exit Function
+        End If
+        i = i + 1
+        If i >= 识别超时次数 Then
+            TracePrint "【换账号】识别超时：" & picPath
+            FindPicClick = False
+            Exit Function
+        End If
+        Delay 500
+    Loop
+End Function
+
+' 识别文字并点击（带超时）
+' 参数：x1,y1,x2,y2 区域；str 文字；color 颜色；sim 相似度；dictId 字库ID
+' 返回：True 成功，False 超时
+Function FindStrClick(x1, y1, x2, y2, str, color, sim, dictId)
+    Dim intX, intY, i
+    UseDict dictId
+    i = 0
+    Do
+        FindStr x1, y1, x2, y2, str, color, sim, intX, intY
+        If intX > -1 And intY > -1 Then
+            Tap intX, intY
+            Delay 1500
+            FindStrClick = True
+            Exit Function
+        End If
+        i = i + 1
+        If i >= 识别超时次数 Then
+            TracePrint "【换账号】识别超时：" & str
+            FindStrClick = False
+            Exit Function
+        End If
+        Delay 500
+    Loop
+End Function
+
+' =============================================
+' 模块四：换账号主流程
+' =============================================
+Sub 换账号流程()
+    Dim 账号数组, 账号内容, 账号行数, 索引内容
+    Dim intX, intY, i
+
+    TracePrint "【换账号】================ 流程开始 ================"
+
+    ' === 检查账号文件 ===
+    账号行数 = File.LinesNumber(账号文件路径)
+    If 账号行数 = 0 Then
+        TracePrint "【换账号】账号文件不存在或为空，停止脚本"
+        ShowMessage "账号文件不存在，停止脚本", 3000, 0, 0
+        EndScript
+    End If
+
+    ' === 读取账号文件 ===
+    账号数组 = File.ReadLines(账号文件路径)
+    TracePrint "【换账号】账号文件共 " & 账号行数 & " 个账号"
+
+    ' === 读取当前索引 ===
+    当前账号索引 = 0
+    索引内容 = File.Read(索引文件路径)
+    If 索引内容 <> "" Then
+        当前账号索引 = CInt(Trim(索引内容))
+    End If
+    TracePrint "【换账号】当前索引：" & 当前账号索引
+
+    ' === 检查索引是否超出范围 ===
+    If 当前账号索引 >= 账号行数 Then
+        TracePrint "【换账号】所有账号已跑完（" & 账号行数 & " 个），停止脚本"
+        ShowMessage "所有账号已跑完，停止脚本", 3000, 0, 0
+        EndScript
+    End If
+
+    账号内容 = Trim(账号数组(当前账号索引))
+    TracePrint "【换账号】使用第 " & (当前账号索引 + 1) & " 个账号：" & 账号内容
+
+    ' === 设置按键输入法（root卸载其他输入法） ===
+    设备的输入法 = getNowIme()
+    TracePrint "【换账号】原始输入法：" & 设备的输入法
+    Call setImeEx("")
+    Delay 1000
+
+    ' === 第1步：识别【退出】→点击683,35→循环识别【进入游戏】（3秒重试） ===
+    TracePrint "【换账号】第1步：识别退出"
+    ' 1.1 先识别【退出】
+    i = 0
+    Do
+        FindPic 662, 10, 714, 66, "Attachment:退出.png", "000000", 0, 0.8, intX, intY
+        If intX > -1 And intY > -1 Then
+            TracePrint "【换账号】识别到【退出】，点击坐标683,35"
+            Tap 683, 35
+            Delay 1500
+            Exit Do
+        End If
+        i = i + 1
+        If i >= 识别超时次数 Then
+            TracePrint "【换账号】第1步超时，强制点击683,35"
+            Tap 683, 35
+            Delay 1500
+            Exit Do
+        End If
+        Delay 500
+    Loop
+
+    ' 1.2 循环识别【进入游戏】，3秒内每秒识别一次，都没识别到才再次点击683,35
+    TracePrint "【换账号】第1步：循环识别进入游戏（3秒内每秒识别一次，都未识别到则重试点击683,35）"
+    UseDict 0
+    Delay 2000
+    Dim j
+    Do
+        ' 3秒内每秒识别一次
+        For j = 1 To 3
+            FindStr 138, 507, 178, 716, "进入游戏", "FFFFFF-303030|E6E4E4-303030|DDDADA-303030", 0.9, intX, intY
+            If intX > -1 And intY > -1 Then
+                TracePrint "【换账号】识别到【进入游戏】，点击"
+                Tap intX, intY
+                Delay 1500
+                Exit Do
+            End If
+            Delay 1000
+        Next
+        ' 3秒内都没识别到，再次点击683,35
+        TracePrint "【换账号】3秒内未识别到【进入游戏】，再次点击683,35"
+        Tap 683, 35
+        Delay 1500
+    Loop
+
+    ' === 第2步：点击坐标668,1226 ===
+    Delay 2000
+    TracePrint "【换账号】第2步：点击坐标668,1226"
+    Tap 668, 1226
+    Delay 1500
+
+    ' === 第3步：点击坐标682,664（账号） ===
+    TracePrint "【换账号】第3步：点击账号坐标682,664"
+    Tap 682, 664
+    Delay 1500
+
+    ' === 第4步：识别点击【登出】 ===
+    TracePrint "【换账号】第4步：识别登出"
+    Call FindPicClick(578, 750, 614, 876, "Attachment:登出.png", 0.8)
+
+    ' === 第5步：识别点击【是】 ===
+    TracePrint "【换账号】第5步：识别是"
+    Call FindPicClick(241, 714, 272, 808, "Attachment:是.png", 0.9)
+
+    ' === 第6步：循环识别【进入游戏】直到出现【密码登录】 ===
+    TracePrint "【换账号】第6步：循环识别进入游戏，直到出现密码登录"
+    UseDict 0
+    i = 0
+    Do
+        ' 识别点击进入游戏
+        FindStr 138, 507, 178, 716, "进入游戏", "FFFFFF-303030|E6E4E4-303030|DDDADA-303030", 0.9, intX, intY
+        If intX > -1 And intY > -1 Then
+            TracePrint "【换账号】识别到【进入游戏】，点击"
+            Tap intX, intY
+            Delay 2000
+        End If
+        ' 检查是否出现密码登录
+        FindPic 109, 783, 152, 928, "Attachment:密码登录.png", "000000", 0, 0.8, intX, intY
+        If intX > -1 And intY > -1 Then
+            TracePrint "【换账号】识别到【密码登录】，点击"
+            Tap intX, intY
+            Delay 1500
+            Exit Do
+        End If
+        i = i + 1
+        If i >= 识别超时次数 Then
+            TracePrint "【换账号】第7步超时，跳过"
+            Exit Do
+        End If
+        Delay 1000
+    Loop
+
+    ' === 第7步：检查协议勾选 ===
+    TracePrint "【换账号】第7步：检查协议勾选"
+    UseDict 0
+    FindStr 273, 350, 298, 381, "勾", "C5DA03-303030", 0.8, intX, intY
+    If intX > -1 And intY > -1 Then
+        TracePrint "【换账号】已勾选协议，跳过"
+    Else
+        TracePrint "【换账号】未勾选协议，点击281,361"
+        Tap 281, 361
+        Delay 1000
+    End If
+
+    ' === 第8步：输入账号（KeyPress_Input 绕过输入法） ===
+    TracePrint "【换账号】第8步：输入账号：" & 账号内容
+    Tap 482, 403
+    Delay 500
+    KeyPress "Back"                    '关闭弹出的输入法
+    Delay 300
+    InputText ""                       '关闭点击输入框时弹出的第三方输入法
+    Delay 100
+    Call KeyPress_Input(账号内容)       '按键模拟输入，不依赖输入法
+    Delay 100
+    InputText ""                       '防止第三方输入法重启
+    Delay 1000
+
+    ' === 第9步：输入密码 ===
+    Delay 1500
+    TracePrint "【换账号】第9步：输入密码：" & 默认密码
+    Tap 384, 425
+    Delay 500
+    KeyPress "Back"                    '关闭弹出的输入法
+    Delay 300
+    InputText ""                       '关闭点击输入框时弹出的第三方输入法
+    Delay 100
+    Call KeyPress_Input(默认密码)       '按键模拟输入，不依赖输入法
+    Delay 100
+    InputText ""                       '防止第三方输入法重启
+    Delay 1000
+
+    ' === 第10步：点击登录 ===
+    TracePrint "【换账号】第10步：点击登录按钮198,517"
+    Tap 198, 517
+    Delay 1500
+
+    ' === 恢复输入法 ===
+    Call restoreAllIme(设备的输入法)
+
+    ' === 第11步：等待35秒进入步骤1 ===
+    TracePrint "【换账号】第11步：等待35秒进入步骤1"
+    Delay 35000
+
+    ' === 更新索引 ===
+    当前账号索引 = 当前账号索引 + 1
+    Call File.Write(索引文件路径, CStr(当前账号索引))
+    TracePrint "【换账号】索引已更新为：" & 当前账号索引
+
+    ' === 重置角色序号 ===
+    当前角色序号 = 1
+    TracePrint "【换账号】角色序号已重置为1，准备重新跑6个角色"
+
+    TracePrint "【换账号】================ 流程完成 ================"
+
+End Sub
